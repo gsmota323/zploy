@@ -5,6 +5,12 @@
     "rootDir": "./src",
     "outDir": "./dist",
     "esModuleInterop": true,
-    "strict": true
-  }
+    "strict": true,
+    "forceConsistentCasingInFileNames": true
+
+  },
+  "exclude": [
+    "prisma.config.ts"
+  ]
+
 }
