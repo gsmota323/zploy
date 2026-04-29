@@ -18,11 +18,11 @@ model User {
 
 model App {
   id        String   @id @default(uuid())
-  name      String
+  name      String   @unique // 👈 DICA 1: Nome único para gerar a URL depois!
   userId    String
   createdAt DateTime @default(now())
   
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   deploys   Deploy[]
   envVars   EnvVar[]
 }
@@ -30,19 +30,20 @@ model App {
 model Deploy {
   id        String   @id @default(uuid())
   appId     String
-  status    String
+  status    String   // (pending, building, running, failed)
   logs      String?
   createdAt DateTime @default(now())
 
-  app App @relation(fields: [appId], references: [id], onDelete: Cascade)
+  app       App      @relation(fields: [appId], references: [id], onDelete: Cascade)
 }
 
 model EnvVar {
-  id     String @id @default(uuid())
-  key    String
-  value  String
-  appId  String
+  id        String   @id @default(uuid())
+  key       String
+  value     String
+  appId     String
 
-  app App @relation(fields: [appId], references: [id], onDelete: Cascade)
+  app       App      @relation(fields: [appId], references: [id], onDelete: Cascade)
   
+  @@unique([appId, key]) // 👈 DICA 2: Um app não pode ter duas chaves com o mesmo nome!
 }
