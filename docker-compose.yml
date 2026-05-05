@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  postgres: #banco
+    image: postgres:15
+    container_name: postgres-tcc
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: tcc_db
+    ports:
+      - "5432:5432"
+    restart: always
+
+  
+  redis: # fila
+    image: redis:alpine
+    container_name: redis-tcc
+    ports:
+      - "6379:6379"
+    restart: always

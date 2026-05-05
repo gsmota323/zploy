@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel do TCC - Clone do Heroku</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; }
+        .box { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        input, button { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        pre { background: #eee; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+
+    <h1>🚀 Painel ZPLOY</h1>
+
+    <div class="box">
+        <h2>1. Fazer Login</h2>
+        <input type="email" id="email" value="teste@tcc.com" placeholder="E-mail">
+        <input type="password" id="password" value="123" placeholder="Senha">
+        <button onclick="login()">Entrar e Pegar Crachá (JWT)</button>
+        <p id="statusLogin" style="color: red;">Deslogado</p>
+    </div>
+
+    <div class="box">
+        <h2>2. Criar Novo App</h2>
+        <input type="text" id="appName" placeholder="nome-do-meu-app">
+        <button onclick="criarApp()">Criar App</button>
+    </div>
+
+    <div class="box">
+        <h2>3. Deletar App</h2>
+        <input type="text" id="deleteAppId" placeholder="Cole aqui o ID do App (ex: 5f075e00-...)">
+        <button onclick="deletarApp()">Deletar App</button>
+    </div>
+
+    <div class="box">
+        <h2>4. Listar Meus Apps</h2>
+        <button onclick="listarApps()">Buscar Meus Apps</button>
+    </div>
+
+    <h3>Respostas do Servidor:</h3>
+    <pre id="console">Aguardando ações...</pre>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+
+        // Função para escrever na telinha preta de baixo
+        function log(mensagem) {
+            document.getElementById('console').innerText = JSON.stringify(mensagem, null, 2);
+        }
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Salva o token no navegador!
+                    localStorage.setItem('token', data.token);
+                    document.getElementById('statusLogin').innerText = "✅ Logado com sucesso!";
+                    document.getElementById('statusLogin').style.color = "green";
+                    log(data);
+                } else {
+                    log(data);
+                }
+            } catch (error) {
+                log({ erro: "A API está rodando no terminal?" });
+            }
+        }
+
+        async function criarApp() {
+            const name = document.getElementById('appName').value;
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                alert("Você precisa fazer login primeiro!");
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/apps`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        // Aqui é onde o crachá entra em ação!
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({ name })
+                });
+
+                const data = await response.json();
+                log(data);
+            } catch (error) {
+                log({ erro: "Falha na comunicação com a API." });
+            }
+        }
+
+        async function deletarApp() {
+            const appId = document.getElementById('deleteAppId').value;
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                alert("Precisa de fazer login primeiro!");
+                return;
+            }
+
+            if (!appId) {
+                alert("Por favor, insira o ID do App que deseja deletar.");
+                return;
+            }
+
+            try {
+                // Repare que o método agora é DELETE e passamos o ID no URL
+                const response = await fetch(`${API_URL}/apps/${appId}`, {
+                    method: 'DELETE',
+                    headers: { 
+                        'Authorization': `Bearer ${token}` 
+                    }
+                });
+
+                const data = await response.json();
+                log(data);
+            } catch (error) {
+                log({ erro: "Falha na comunicação com a API." });
+            }
+        }
+
+        async function listarApps() {
+            // O navegador vai buscar a chave que guardamos no Fazer Login
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                alert("Você precisa fazer login primeiro!");
+                return;
+            }
+
+            try {
+                // Para listar, usamos o método GET na rota /apps
+                const response = await fetch(`${API_URL}/apps`, {
+                    method: 'GET',
+                    headers: { 
+                        'Authorization': `Bearer ${token}` 
+                    }
+                });
+
+                const data = await response.json();
+                
+                // Joga a lista de aplicativos na tela preta
+                log(data);
+            } catch (error) {
+                log({ erro: "Falha na comunicação com a API." });
+            }
+        }
+    </script>
+</body>
+</html>
