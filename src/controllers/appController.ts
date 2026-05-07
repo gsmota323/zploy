@@ -1,6 +1,7 @@
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import { createApp, getUserApps, deleteApp } from '../services/appService';
+import { addDeployJob } from '../queues/deployQueue';
 
 
 export async function create(req: AuthRequest, res: Response) {
@@ -50,5 +51,28 @@ export async function remove(req: AuthRequest, res: Response) {
     res.json({ message: 'App deletado com sucesso e todos os recursos limpos!' });
   } catch (error: any) {
     res.status(400).json({ error: error.message });
+  }
+}
+
+export async function startDeploy(req: Request, res: Response) {
+  try {
+    const { id } = req.params; // Pega o ID do app pela URL
+    const { repositoryUrl } = req.body; // Pega o link do GitHub que o usuário enviou
+
+    if (!repositoryUrl) {
+      return res.status(400).json({ error: "O link do repositório é obrigatório." });
+    }
+
+    // 1. A API guarda a req e joga pro Redis
+    const job = await addDeployJob(String(id), repositoryUrl);
+
+    // 2. A API responde IMEDIATAMENTE ao usuário (202 Accepted)
+    return res.status(202).json({
+      message: "Deploy colocado na fila com sucesso!",
+      jobId: job.id
+    });
+  } catch (error) {
+    console.error("Erro ao enviar deploy para a fila:", error);
+    return res.status(500).json({ error: "Erro interno no servidor." });
   }
 }

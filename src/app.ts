@@ -1,8 +1,9 @@
 import express from "express";
 const cors = require("cors");
 import userRoutes from "./routes/userRoutes";
-import authRoutes from "./routes/authRoutes"; // 👈 1. Importe as rotas de auth
+import authRoutes from "./routes/authRoutes"; 
 import appRoutes from "./routes/appRoutes";
+import './workers/deployWorker';
 
 const app = express();
 

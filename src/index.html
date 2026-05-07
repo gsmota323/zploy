@@ -40,6 +40,13 @@
         <button onclick="listarApps()">Buscar Meus Apps</button>
     </div>
 
+    <div style="border: 1px solid #ccc; padding: 10px; margin-top: 10px;">
+    <h3>5. Fazer Deploy (Testar Fila Redis)</h3>
+    <input type="text" id="deployAppId" placeholder="ID do App" style="width: 250px;">
+    <input type="text" id="repoUrl" placeholder="URL do GitHub (ex: https://github.com/user/repo)" style="width: 300px;">
+    <button onclick="fazerDeploy()">Colocar na Fila!</button>
+</div>
+    
     <h3>Respostas do Servidor:</h3>
     <pre id="console">Aguardando ações...</pre>
 
@@ -161,6 +168,40 @@
                 log({ erro: "Falha na comunicação com a API." });
             }
         }
+
+
+
+        async function fazerDeploy() {
+    const appId = document.getElementById('deployAppId').value;
+    const repositoryUrl = document.getElementById('repoUrl').value;
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+        alert("Precisa fazer login primeiro!");
+        return;
+    }
+    if (!appId || !repositoryUrl) {
+        alert("Por favor, preencha o ID do App e o link do repositório.");
+        return;
+    }
+
+    try {
+        // Dispara o POST para a rota que acabou de criar
+        const response = await fetch(`http://localhost:3000/apps/${appId}/deploy`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ repositoryUrl })
+        });
+
+        const data = await response.json();
+        log(data); // Mostra a resposta do servidor na sua caixa preta
+    } catch (error) {
+        log({ erro: "Falha na comunicação com a API." });
+    }
+}
     </script>
 </body>
 </html>
