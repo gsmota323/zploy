@@ -5,7 +5,7 @@ import { saveEnv, listEnvs, deleteEnv } from '../services/envService';
 
 const prisma = new PrismaClient();
 
-// Função auxiliar para garantir que utilizadores mal-intencionados não mexam em apps dos outros
+
 async function checkAppOwnership(appId: string, userId: string) {
   const app = await prisma.app.findUnique({ where: { id: appId } });
   if (!app) throw new Error('Aplicativo não encontrado.');
@@ -14,7 +14,7 @@ async function checkAppOwnership(appId: string, userId: string) {
 
 export async function add(req: AuthRequest, res: Response) {
   try {
-    const appId = String(req.params.appId); // Forçamos a ser string para agradar ao TypeScript
+    const appId = String(req.params.appId); 
     const { key, value } = req.body;
     
     await checkAppOwnership(appId, String(req.userId));
@@ -28,7 +28,7 @@ export async function add(req: AuthRequest, res: Response) {
 
 export async function list(req: AuthRequest, res: Response) {
   try {
-    const appId = String(req.params.appId); // Forçamos a ser string
+    const appId = String(req.params.appId); 
     
     await checkAppOwnership(appId, String(req.userId));
     const envs = await listEnvs(appId);
@@ -41,8 +41,8 @@ export async function list(req: AuthRequest, res: Response) {
 
 export async function remove(req: AuthRequest, res: Response) {
   try {
-    const appId = String(req.params.appId); // Forçamos a ser string
-    const envId = String(req.params.envId); // Forçamos a ser string
+    const appId = String(req.params.appId); 
+    const envId = String(req.params.envId); 
     
     await checkAppOwnership(appId, String(req.userId));
     await deleteEnv(envId);

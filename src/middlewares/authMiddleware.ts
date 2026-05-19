@@ -14,7 +14,6 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
     return res.status(401).json({ error: 'Token não fornecido.' });
   }
 
-  // O padrão é "Bearer <token>", então separamos pelo espaço
   const [, token] = authHeader.split(' ');
 
   try {

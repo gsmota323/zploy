@@ -12,7 +12,7 @@ export async function register(req: Request, res: Response) {
 export async function login(req: Request, res: Response) {
   const { email, password } = req.body;
   
-  // O service vai verificar o bcrypt.compare e gerar o JWT
+  // service vai verificar o bcrypt.compare e gerar o JWT
   const token = await authenticateUser(email, password);
   
   if (!token) {

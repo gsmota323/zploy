@@ -17,7 +17,7 @@ async function main() {
     },
   });
 
-  console.log(`✅ Usuário fixo criado: ${user.email} | Senha: 123456`);
+  console.log(`Usuário fixo criado: ${user.email} | Senha: 123456`);
 }
 
 main()

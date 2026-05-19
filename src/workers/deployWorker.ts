@@ -1,8 +1,12 @@
 import { Worker, Job } from 'bullmq';
 import { redisConnection } from '../config/redis';
+import { spawn, exec } from 'child_process';
+import { promisify } from 'util';
 import simpleGit from 'simple-git';
 import fs from 'fs';
 import path from 'path';
+
+const execAsync = promisify(exec);
 
 const git = simpleGit();
 
@@ -79,6 +83,57 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
         fs.writeFileSync(dockerfilePath, dockerfileContent, { encoding: 'utf-8' });
         console.log(`[Worker] Dockerfile gerado com sucesso no caminho: ${dockerfilePath}`);
         // --- FIM DA GERAÇÃO DO DOCKERFILE ---
+
+        // --- INÍCIO DO DOCKER BUILD ---
+        const imageName = `zploy-app-${appId}`;
+        console.log(`[Worker] Iniciando o Docker Build da imagem: ${imageName}...`);
+
+        // promisse para controlar os eventos do "spawn"
+        await new Promise((resolve, reject) => {
+            // spawn(comando, [lista, de, argumentos])
+            const buildProcess = spawn('docker', ['build', '-t', imageName, tempDeployDir]);
+
+            // captura os logs (Stream de Output)
+            buildProcess.stdout.on('data', (data) => {
+                console.log(`🐳 [Build] ${data.toString().trim()}`);
+            });
+
+            // captura os erros (Stream de Error)
+            buildProcess.stderr.on('data', (data) => {
+                console.log(`⚠️ [Build Log] ${data.toString().trim()}`);
+            });
+
+            // fechamento de processo
+            buildProcess.on('close', (code) => {
+                if (code === 0) {
+                    console.log(`✅ [Worker] Imagem Docker criada com sucesso: ${imageName}`);
+                    resolve(true); // Sucesso absoluto
+                } else {
+                    reject(new Error(`O Docker Build falhou com o código de saída: ${code}`)); 
+                }
+            });
+        });
+        // --- FIM DO DOCKER BUILD ---
+
+        // --- INÍCIO DO DOCKER RUN ---
+        console.log(`[Worker] A preparar para iniciar o container...`);
+        
+        // 1. Descobrir a porta interna baseada no Runtime
+        const containerPort = runtime === 'Node' ? 3000 : 8000; 
+
+        // 2. Gerar uma porta externa aleatória (entre 30000 e 40000) para evitar conflitos no PC
+        const hostPort = Math.floor(Math.random() * (40000 - 30000) + 30000);
+        
+        const containerName = `container-${appId}`;
+
+        console.log(`[Worker] A mapear a porta externa ${hostPort} para a porta interna ${containerPort}...`);
+
+        // 3. Executar o comando para levantar o container em background (-d)
+        await execAsync(`docker run -d -p ${hostPort}:${containerPort} --name ${containerName} ${imageName}`);
+
+        console.log(`🚀 [Worker] Deploy concluído com sucesso!`);
+        console.log(`🌐 [Worker] App online e acessível em: http://localhost:${hostPort}`);
+        // --- FIM DO DOCKER RUN ---
 
         // o retorno sinaliza ao BullMQ a transição de estado do Job para 'completed'
         return { status: 'sucesso', diretorio: tempDeployDir, runtime };

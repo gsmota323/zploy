@@ -7,7 +7,7 @@ import { addDeployJob } from '../queues/deployQueue';
 export async function create(req: AuthRequest, res: Response) {
   try {
     const { name } = req.body;
-    const userId = req.userId; // Vem do nosso middleware de autenticação!
+    const userId = req.userId; // Vem do middleware de autenticação!
 
     if (!userId) {
       return res.status(401).json({ error: 'Usuário não autenticado.' });
@@ -16,7 +16,7 @@ export async function create(req: AuthRequest, res: Response) {
     const app = await createApp(name, String(userId));
     res.status(201).json(app);
   } catch (error) {
-    // Se o erro for o nome duplicado que travamos no schema, avisamos o usuário
+
     res.status(400).json({ error: 'Erro ao criar app. O nome já pode estar em uso.' });
   }
 }
@@ -39,7 +39,7 @@ export async function list(req: AuthRequest, res: Response) {
 
 export async function remove(req: AuthRequest, res: Response) {
   try {
-    const appId = String(req.params.id); // Pegamos o ID da URL (ex: /apps/123)
+    const appId = String(req.params.id); // pega o ID da URL (ex: /apps/123)
     const userId = req.userId;
 
     if (!userId) {
@@ -56,14 +56,14 @@ export async function remove(req: AuthRequest, res: Response) {
 
 export async function startDeploy(req: Request, res: Response) {
   try {
-    const { id } = req.params; // Pega o ID do app pela URL
-    const { repositoryUrl } = req.body; // Pega o link do GitHub que o usuário enviou
+    const { id } = req.params; // pega o ID do app pela URL
+    const { repositoryUrl } = req.body; // link do repositorio
 
     if (!repositoryUrl) {
       return res.status(400).json({ error: "O link do repositório é obrigatório." });
     }
 
-    // 1. A API guarda a req e joga pro Redis
+    //1. guarda a req e joga pro Redis
     const job = await addDeployJob(String(id), repositoryUrl);
 
     // 2. A API responde IMEDIATAMENTE ao usuário (202 Accepted)
