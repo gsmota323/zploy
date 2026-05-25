@@ -2,12 +2,14 @@ import { Response, Request } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import { createApp, getUserApps, deleteApp } from '../services/appService';
 import { addDeployJob } from '../queues/deployQueue';
+import { PrismaClient } from '@prisma/client';
 
+const prisma = new PrismaClient();
 
 export async function create(req: AuthRequest, res: Response) {
   try {
     const { name } = req.body;
-    const userId = req.userId; // Vem do middleware de autenticação!
+    const userId = req.userId;
 
     if (!userId) {
       return res.status(401).json({ error: 'Usuário não autenticado.' });
@@ -16,7 +18,6 @@ export async function create(req: AuthRequest, res: Response) {
     const app = await createApp(name, String(userId));
     res.status(201).json(app);
   } catch (error) {
-
     res.status(400).json({ error: 'Erro ao criar app. O nome já pode estar em uso.' });
   }
 }
@@ -36,10 +37,9 @@ export async function list(req: AuthRequest, res: Response) {
   }
 }
 
-
 export async function remove(req: AuthRequest, res: Response) {
   try {
-    const appId = String(req.params.id); // pega o ID da URL (ex: /apps/123)
+    const appId = String(req.params.id);
     const userId = req.userId;
 
     if (!userId) {
@@ -56,19 +56,30 @@ export async function remove(req: AuthRequest, res: Response) {
 
 export async function startDeploy(req: Request, res: Response) {
   try {
-    const { id } = req.params; // pega o ID do app pela URL
-    const { repositoryUrl } = req.body; // link do repositorio
+    const { id } = req.params; // appId
+    const { repositoryUrl } = req.body;
 
     if (!repositoryUrl) {
       return res.status(400).json({ error: "O link do repositório é obrigatório." });
     }
 
-    //1. guarda a req e joga pro Redis
-    const job = await addDeployJob(String(id), repositoryUrl);
+    // Identificar o appId de forma segura
+    const appId = Array.isArray(id) ? id[0] : id;
 
-    // 2. A API responde IMEDIATAMENTE ao usuário (202 Accepted)
+    // 1. CRIAR E ARMAZENAR: Aqui salvamos o resultado na variável 'newDeploy'
+    const newDeploy = await prisma.deploy.create({
+      data: {
+        appId: appId,
+        status: 'pending'
+      }
+    });
+
+    // 2. USAR: Agora 'newDeploy' existe e tem o seu .id
+    const job = await addDeployJob(appId, repositoryUrl, newDeploy.id);
+
     return res.status(202).json({
-      message: "Deploy colocado na fila com sucesso!",
+      message: "Deploy na fila!",
+      deployId: newDeploy.id,
       jobId: job.id
     });
   } catch (error) {

@@ -116,24 +116,37 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
         });
         // --- FIM DO DOCKER BUILD ---
 
+
+
+
         // --- INÍCIO DO DOCKER RUN ---
         console.log(`[Worker] A preparar para iniciar o container...`);
-        
-        // 1. Descobrir a porta interna baseada no Runtime
-        const containerPort = runtime === 'Node' ? 3000 : 8000; 
 
-        // 2. Gerar uma porta externa aleatória (entre 30000 e 40000) para evitar conflitos no PC
+        // 1. Buscar variáveis no Prisma
+        const envVars = await prisma.envVar.findMany({ where: { appId } });
+        const envArgs = envVars.map(ev => `-e "${ev.key}=${ev.value}"`).join(' ');
+
+        // 2. Configurações de rede e nome
+        const containerPort = runtime === 'Node' ? 3000 : 8000;
         const hostPort = Math.floor(Math.random() * (40000 - 30000) + 30000);
-        
         const containerName = `container-${appId}`;
 
+        // 3. Segurança: Remove o container antigo se existir (evita erro de "name already in use")
+        try {
+            await execAsync(`docker rm -f ${containerName}`);
+            console.log(`[Worker] Container antigo ${containerName} removido.`);
+        } catch (e) {
+            // Se não existir, não há problema, prosseguimos
+        }
+
+        // 4. Executar o comando final com as variáveis
         console.log(`[Worker] A mapear a porta externa ${hostPort} para a porta interna ${containerPort}...`);
 
-        // 3. Executar o comando para levantar o container em background (-d)
-        await execAsync(`docker run -d -p ${hostPort}:${containerPort} --name ${containerName} ${imageName}`);
+        const runCommand = `docker run -d ${envArgs} -p ${hostPort}:${containerPort} --name ${containerName} ${imageName}`;
+        await execAsync(runCommand);
 
-        console.log(`🚀 [Worker] Deploy concluído com sucesso!`);
-        console.log(`🌐 [Worker] App online e acessível em: http://localhost:${hostPort}`);
+        console.log(`🚀 [Worker] Deploy concluído!`);
+        console.log(`🌐 [Worker] App online em: http://localhost:${hostPort}`);
         // --- FIM DO DOCKER RUN ---
 
         // --- INÍCIO DA ATUALIZAÇÃO DO BANCO DE DADOS ---
@@ -157,10 +170,14 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
         }
         // --- FIM DA ATUALIZAÇÃO DO BANCO DE DADOS ---
 
-        // --- CLEANUP (OPCIONAL MAS RECOMENDADO) ---
+        
         if (fs.existsSync(tempDeployDir)) {
-            fs.rmSync(tempDeployDir, { recursive: true, force: true });
-            console.log(`🧹 [Worker] Pasta temporária do código apagada para libertar espaço.`);
+            try {
+                fs.rmSync(tempDeployDir, { recursive: true, force: true });
+                console.log(`🧹 [Worker] Pasta temporária limpa.`);
+            } catch (cleanupError) {
+                console.warn(`⚠️ [Worker] Aviso: Não foi possível apagar a pasta temporária, mas o deploy foi um sucesso.`);
+            }
         }
 
         // o retorno sinaliza ao BullMQ a transição de estado do Job para 'completed'

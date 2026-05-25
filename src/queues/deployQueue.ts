@@ -7,12 +7,13 @@ export const deployQueue = new Queue('DeployQueue', {
 });
 
 // Função auxiliar para injetar tarefas na fila
-export async function addDeployJob(appId: string, repositoryUrl: string) {
+export async function addDeployJob(appId: string, repositoryUrl: string, deployId: string) {
   const job = await deployQueue.add('build-image', {
     appId,
     repositoryUrl,
+    deployId,
   });
   
-  console.log(`Job adicionado à fila: ${job.id} (App: ${appId})`);
+  console.log(`Job adicionado à fila: ${job.id} (App: ${appId}, Deploy: ${deployId})`);
   return job;
 }
