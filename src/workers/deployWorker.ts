@@ -5,14 +5,15 @@ import { promisify } from 'util';
 import simpleGit from 'simple-git';
 import fs from 'fs';
 import path from 'path';
+import { PrismaClient } from '@prisma/client';
 
 const execAsync = promisify(exec);
-
 const git = simpleGit();
+const prisma = new PrismaClient();
 
 export const worker = new Worker('DeployQueue', async (job: Job) => {
     // extração do payload recebido na mensagem do Redis  
-    const { appId, repositoryUrl } = job.data;
+    const { appId, repositoryUrl, deployId } = job.data;
     
     console.log(`\n[Worker] Iniciando job ${job.id} para o App: ${appId}`);
     console.log(`[Worker] Repositório alvo: ${repositoryUrl}`);
@@ -53,7 +54,7 @@ export const worker = new Worker('DeployQueue', async (job: Job) => {
         // --- FIM DA DETEÇÃO DE RUNTIME ---
 
         // --- GERAÇÃO DO DOCKERFILE ---
-        console.log('[Worker] Iniciando a geração dinâmica do Dockerfile para o runtime: ${runtime}');
+        console.log(`[Worker] Iniciando a geração dinâmica do Dockerfile para o runtime: ${runtime}`);
         
         const dockerfilePath = path.join(tempDeployDir, 'Dockerfile');
         let dockerfileContent = '';
@@ -88,7 +89,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
         const imageName = `zploy-app-${appId}`;
         console.log(`[Worker] Iniciando o Docker Build da imagem: ${imageName}...`);
 
-        // promisse para controlar os eventos do "spawn"
+        // promessa para controlar os eventos do "spawn"
         await new Promise((resolve, reject) => {
             // spawn(comando, [lista, de, argumentos])
             const buildProcess = spawn('docker', ['build', '-t', imageName, tempDeployDir]);
@@ -135,12 +136,51 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
         console.log(`🌐 [Worker] App online e acessível em: http://localhost:${hostPort}`);
         // --- FIM DO DOCKER RUN ---
 
+        // --- INÍCIO DA ATUALIZAÇÃO DO BANCO DE DADOS ---
+        console.log(`[Worker] A guardar o link na base de dados (Prisma)...`);
+        
+        // 1. Atualiza a App com o link final e o estado 'running'
+        await prisma.app.update({
+            where: { id: appId },
+            data: { 
+                url: `http://localhost:${hostPort}`,
+                status: 'running' 
+            }
+        });
+
+        // 2. Atualiza o Histórico de Deploy para 'success' (se existir)
+        if (deployId) {
+            await prisma.deploy.update({
+                where: { id: deployId },
+                data: { status: 'success' }
+            });
+        }
+        // --- FIM DA ATUALIZAÇÃO DO BANCO DE DADOS ---
+
+        // --- CLEANUP (OPCIONAL MAS RECOMENDADO) ---
+        if (fs.existsSync(tempDeployDir)) {
+            fs.rmSync(tempDeployDir, { recursive: true, force: true });
+            console.log(`🧹 [Worker] Pasta temporária do código apagada para libertar espaço.`);
+        }
+
         // o retorno sinaliza ao BullMQ a transição de estado do Job para 'completed'
-        return { status: 'sucesso', diretorio: tempDeployDir, runtime };
+        return { status: 'sucesso', porta: hostPort, runtime };
 
     } catch (error) {
         // tratamento de exceção 
-        console.error(`[Worker] Falha na operação de rede ou I/O (Git Clone ou Escrita).`);
+        console.error(`[Worker] Falha na operação de deploy.`);
+        
+        // --- BÓNUS: AVISAR O BANCO DE DADOS QUE FALHOU ---
+        if (deployId) {
+            try {
+                await prisma.deploy.update({
+                    where: { id: deployId },
+                    data: { status: 'failed' }
+                });
+            } catch (dbError) {
+                console.error(`[Worker] Não foi possível atualizar o status de falha no banco:`, dbError);
+            }
+        }
         
         // apagando o diretório parcialmente clonado em caso de falha
         if (fs.existsSync(tempDeployDir)) {
@@ -154,7 +194,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 // Listeners de eventos para monitorização do ciclo de vida do Worker
 worker.on('completed', (job, returnvalue) => {
-    console.log(`🟢 [BullMQ] Job ${job.id} concluído. Código-fonte (${returnvalue?.runtime}) pronto para a etapa de build.`);
+    console.log(`🟢 [BullMQ] Job ${job.id} 100% concluído! A App está a correr na porta ${returnvalue?.porta}.`);
 });
 
 worker.on('failed', (job, err) => {

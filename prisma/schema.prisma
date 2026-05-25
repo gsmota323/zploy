@@ -21,6 +21,7 @@ model App {
   name      String   @unique // 👈 DICA 1: Nome único para gerar a URL depois!
   userId    String
   createdAt DateTime @default(now())
+  url       String?
   
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   deploys   Deploy[]
