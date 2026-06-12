@@ -28,13 +28,14 @@ export const worker = new Worker(
 
     console.log(`\n[Worker] Iniciando job ${job.id} para o App: ${appId}`);
     console.log(`[Worker] Repositório alvo: ${repositoryUrl}`);
+    console.log(`[Worker] Diretório temporário: ${tempDeployDir}`);
 
     try {
       await createDeployLog({
         deployId,
         type: "build",
         level: "info",
-        message: `Worker iniciou o processamento do app ${appId}.`,
+        message: "Deploy iniciado.",
       });
 
       await prisma.deploy.update({
@@ -51,17 +52,11 @@ export const worker = new Worker(
         deployId,
         type: "build",
         level: "info",
-        message: "Status atualizado para building.",
+        message: "Preparando ambiente para o deploy.",
       });
 
       if (fs.existsSync(tempDeployDir)) {
-        await createDeployLog({
-          deployId,
-          type: "build",
-          level: "info",
-          message: "Removendo diretório residual de deploy anterior.",
-        });
-
+        console.log("[Worker] Removendo diretório temporário antigo...");
         fs.rmSync(tempDeployDir, {
           recursive: true,
           force: true,
@@ -76,7 +71,7 @@ export const worker = new Worker(
         deployId,
         type: "build",
         level: "info",
-        message: `Clonando repositório: ${repositoryUrl}`,
+        message: "Baixando código do repositório.",
       });
 
       await runCommandWithLogs({
@@ -90,14 +85,14 @@ export const worker = new Worker(
         deployId,
         type: "build",
         level: "info",
-        message: `Repositório clonado com sucesso em: ${tempDeployDir}`,
+        message: "Código do repositório baixado com sucesso.",
       });
 
       await createDeployLog({
         deployId,
         type: "build",
         level: "info",
-        message: "Inspecionando arquivos do projeto para detectar runtime.",
+        message: "Detectando tecnologia do projeto.",
       });
 
       let runtime: "Node" | "Python";
@@ -112,7 +107,7 @@ export const worker = new Worker(
           deployId,
           type: "build",
           level: "info",
-          message: "Runtime detectado: Node.js.",
+          message: "Projeto Node.js detectado.",
         });
       } else if (hasRequirementsTxt) {
         runtime = "Python";
@@ -121,15 +116,22 @@ export const worker = new Worker(
           deployId,
           type: "build",
           level: "info",
-          message: "Runtime detectado: Python.",
+          message: "Projeto Python detectado.",
         });
       } else {
         throw new Error(
-          "Runtime não suportado. Nenhum package.json ou requirements.txt foi encontrado."
+          "Não foi possível identificar a tecnologia do projeto. Envie um projeto Node.js com package.json ou Python com requirements.txt."
         );
       }
 
       const containerPort = runtime === "Node" ? 5006 : 8000;
+
+      await createDeployLog({
+        deployId,
+        type: "build",
+        level: "info",
+        message: "Preparando ambiente de execução.",
+      });
 
       const dockerfilePath = path.join(tempDeployDir, "Dockerfile");
       let dockerfileContent = "";
@@ -164,11 +166,14 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
         encoding: "utf-8",
       });
 
+      console.log(`[Worker] Dockerfile gerado em: ${dockerfilePath}`);
+      console.log(`[Worker] Porta interna definida: ${containerPort}`);
+
       await createDeployLog({
         deployId,
         type: "build",
         level: "info",
-        message: `Dockerfile gerado com sucesso para ${runtime}. Porta interna definida: ${containerPort}.`,
+        message: "Ambiente de execução preparado com sucesso.",
       });
 
       const imageName = `zploy-app-${appId.toLowerCase()}`;
@@ -177,7 +182,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
         deployId,
         type: "build",
         level: "info",
-        message: `Iniciando Docker Build da imagem: ${imageName}`,
+        message: "Construindo aplicação.",
       });
 
       await runCommandWithLogs({
@@ -191,14 +196,14 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
         deployId,
         type: "build",
         level: "info",
-        message: `Imagem Docker criada com sucesso: ${imageName}`,
+        message: "Aplicação construída com sucesso.",
       });
 
       await createDeployLog({
         deployId,
         type: "runtime",
         level: "info",
-        message: "Preparando execução do container.",
+        message: "Iniciando aplicação.",
       });
 
       const envVars = await prisma.envVar.findMany({
@@ -213,29 +218,22 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
       const hostPort = Math.floor(Math.random() * (40000 - 30000) + 30000);
       const containerName = `container-${appId}`;
 
-      await createDeployLog({
-        deployId,
-        type: "runtime",
-        level: "info",
-        message: `Container será iniciado na porta externa ${hostPort}, apontando para a porta interna ${containerPort}.`,
-      });
+      console.log(`[Worker] Container: ${containerName}`);
+      console.log(`[Worker] Porta externa: ${hostPort}`);
+      console.log(`[Worker] Porta interna: ${containerPort}`);
 
       try {
         await execAsync(`docker rm -f ${containerName}`);
+        console.log(`[Worker] Container anterior removido: ${containerName}`);
 
         await createDeployLog({
           deployId,
           type: "runtime",
           level: "info",
-          message: `Container antigo removido: ${containerName}`,
+          message: "Versão anterior da aplicação encerrada.",
         });
       } catch {
-        await createDeployLog({
-          deployId,
-          type: "runtime",
-          level: "info",
-          message: `Nenhum container antigo encontrado com o nome: ${containerName}`,
-        });
+        console.log(`[Worker] Nenhum container anterior encontrado: ${containerName}`);
       }
 
       await runCommandWithLogs({
@@ -262,7 +260,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
         deployId,
         type: "runtime",
         level: "info",
-        message: `App online em: ${appUrl}`,
+        message: `Aplicação online em: ${appUrl}`,
       });
 
       await prisma.app.update({
@@ -295,19 +293,9 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
             force: true,
           });
 
-          await createDeployLog({
-            deployId,
-            type: "build",
-            level: "info",
-            message: "Pasta temporária removida com sucesso.",
-          });
+          console.log("[Worker] Pasta temporária removida com sucesso.");
         } catch {
-          await createDeployLog({
-            deployId,
-            type: "build",
-            level: "info",
-            message: "Aviso: não foi possível remover a pasta temporária.",
-          });
+          console.warn("[Worker] Não foi possível remover a pasta temporária.");
         }
       }
 
@@ -330,7 +318,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
           deployId,
           type: "build",
           level: "error",
-          message: `Falha no deploy: ${errorMessage}`,
+          message: `Deploy falhou: ${errorMessage}`,
         });
 
         await prisma.deploy.update({
