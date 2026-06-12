@@ -17,8 +17,15 @@ export async function create(req: AuthRequest, res: Response) {
 
     const app = await createApp(name, String(userId));
     res.status(201).json(app);
-  } catch (error) {
-    res.status(400).json({ error: 'Erro ao criar app. O nome já pode estar em uso.' });
+  } catch (error: any) {
+    // 1. Mostra o erro real no teu terminal (servidor)
+    console.error("ERRO NO CREATE APP:", error);
+
+    // 2. Retorna o erro real ou uma mensagem mais informativa para o usuário
+    res.status(400).json({ 
+        error: 'Erro ao criar app.', 
+        details: error.message || 'Erro desconhecido' 
+    });
   }
 }
 
@@ -66,7 +73,6 @@ export async function startDeploy(req: Request, res: Response) {
     // Identificar o appId de forma segura
     const appId = Array.isArray(id) ? id[0] : id;
 
-    // 1. CRIAR E ARMAZENAR: Aqui salvamos o resultado na variável 'newDeploy'
     const newDeploy = await prisma.deploy.create({
       data: {
         appId: appId,
@@ -74,7 +80,6 @@ export async function startDeploy(req: Request, res: Response) {
       }
     });
 
-    // 2. USAR: Agora 'newDeploy' existe e tem o seu .id
     const job = await addDeployJob(appId, repositoryUrl, newDeploy.id);
 
     return res.status(202).json({

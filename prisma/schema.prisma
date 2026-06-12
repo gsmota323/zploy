@@ -20,7 +20,7 @@ model App {
   id            String   @id @default(uuid())
   name          String   @unique 
   userId        String
-  repositoryUrl String   
+  repositoryUrl String?   
   status        String   @default("pending") 
   url           String?
   createdAt     DateTime @default(now())

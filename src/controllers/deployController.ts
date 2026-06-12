@@ -1,16 +1,14 @@
 import { Request, Response } from 'express';
-// 1. Importe o Prisma de onde você o instanciou ou crie uma instância local
 import { PrismaClient } from '@prisma/client'; 
 import { addDeployJob } from '../queues/deployQueue';
 
-const prisma = new PrismaClient(); // A instância que resolve o erro 'Cannot find prisma'
+const prisma = new PrismaClient(); 
 
 export async function startDeploy(req: Request, res: Response) {
   try {
     const { id } = req.params; 
     const { repositoryUrl } = req.body;
 
-    // 2. Agora o 'newDeploy' vai ser reconhecido pois está declarado nesta função
     const newDeploy = await prisma.deploy.create({
         data: {
             appId: String(id),

@@ -89,7 +89,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
         const imageName = `zploy-app-${appId}`;
         console.log(`[Worker] Iniciando o Docker Build da imagem: ${imageName}...`);
 
-        // promessa para controlar os eventos do "spawn"
+        // promise para controlar os eventos do "spawn"
         await new Promise((resolve, reject) => {
             // spawn(comando, [lista, de, argumentos])
             const buildProcess = spawn('docker', ['build', '-t', imageName, tempDeployDir]);
@@ -108,14 +108,13 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
             buildProcess.on('close', (code) => {
                 if (code === 0) {
                     console.log(`✅ [Worker] Imagem Docker criada com sucesso: ${imageName}`);
-                    resolve(true); // Sucesso absoluto
+                    resolve(true); 
                 } else {
                     reject(new Error(`O Docker Build falhou com o código de saída: ${code}`)); 
                 }
             });
         });
         // --- FIM DO DOCKER BUILD ---
-
 
 
 
@@ -127,16 +126,16 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
         const envArgs = envVars.map(ev => `-e "${ev.key}=${ev.value}"`).join(' ');
 
         // 2. Configurações de rede e nome
-        const containerPort = runtime === 'Node' ? 3000 : 8000;
+        const containerPort = runtime === 'Node' ? 5006 : 8000;
         const hostPort = Math.floor(Math.random() * (40000 - 30000) + 30000);
         const containerName = `container-${appId}`;
 
-        // 3. Segurança: Remove o container antigo se existir (evita erro de "name already in use")
+        // 3. Remove o container antigo se existir 
         try {
             await execAsync(`docker rm -f ${containerName}`);
             console.log(`[Worker] Container antigo ${containerName} removido.`);
         } catch (e) {
-            // Se não existir, não há problema, prosseguimos
+            
         }
 
         // 4. Executar o comando final com as variáveis

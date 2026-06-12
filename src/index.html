@@ -2,206 +2,112 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel do TCC - Clone do Heroku</title>
+    <title>Painel ZPLOY - TCC Completo</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; }
-        .box { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
-        input, button { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; }
-        pre { background: #eee; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; max-width: 800px; margin: auto; background: #f4f7f6; }
+        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        h2 { color: #555; font-size: 1.1rem; }
+        input, button { padding: 10px; margin: 5px 0; width: 100%; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .btn-del { background: #dc3545; }
+        .btn-del:hover { background: #a71d2a; }
+        pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 12px; }
+        .app-item { border-bottom: 1px solid #eee; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
 
-    <h1>Painel ZPLOY</h1>
+    <h1>🚀 Painel ZPLOY</h1>
 
-    <div class="box">
-        <h2>1. Fazer Login</h2>
-        <input type="email" id="email" value="teste@tcc.com" placeholder="E-mail">
+    <div class="card">
+        <h2>Auth</h2>
+        <input type="email" id="email" value="teste" placeholder="Email">
         <input type="password" id="password" value="123" placeholder="Senha">
-        <button onclick="login()">Entrar e Pegar Crachá (JWT)</button>
-        <p id="statusLogin" style="color: red;">Deslogado</p>
+        <button onclick="login()">Login</button>
+        <button class="success" onclick="registrar()">Registrar</button>
+        <p id="statusLogin">Status: Deslogado</p>
     </div>
 
-    <div class="box">
-        <h2>2. Criar Novo App</h2>
-        <input type="text" id="appName" placeholder="nome-do-meu-app">
+    <div class="card">
+        <h2>Apps</h2>
+        <input type="text" id="newAppName" placeholder="Nome do novo App">
         <button onclick="criarApp()">Criar App</button>
+        <button onclick="listarApps()">Listar Meus Apps</button>
+        <div id="listaApps"></div>
     </div>
 
-    <div class="box">
-        <h2>3. Deletar App</h2>
-        <input type="text" id="deleteAppId" placeholder="Cole aqui o ID do App (ex: 5f075e00-...)">
-        <button onclick="deletarApp()">Deletar App</button>
+    <div class="card" style="border: 2px solid #28a745;">
+        <h2>Deploy (Fila Redis)</h2>
+        <input type="text" id="deployAppId" placeholder="ID do App">
+        <input type="text" id="repoUrl" value="" placeholder="URL do GitHub">
+        <button style="background: #28a745;" onclick="fazerDeploy()">Disparar Deploy</button>
     </div>
 
-    <div class="box">
-        <h2>4. Listar Meus Apps</h2>
-        <button onclick="listarApps()">Buscar Meus Apps</button>
-    </div>
-
-    <div style="border: 1px solid #ccc; padding: 10px; margin-top: 10px;">
-    <h3>5. Fazer Deploy (Testar Fila Redis)</h3>
-    <input type="text" id="deployAppId" placeholder="ID do App" style="width: 250px;">
-    <input type="text" id="repoUrl" placeholder="URL do GitHub (ex: https://github.com/user/repo)" style="width: 300px;">
-    <button onclick="fazerDeploy()">Colocar na Fila!</button>
-</div>
-    
-    <h3>Respostas do Servidor:</h3>
-    <pre id="console">Aguardando ações...</pre>
+    <h3>Consola <button onclick="document.getElementById('console').innerText='Aguardando...'" style="width: auto; background: #666;">Limpar</button></h3>
+    <pre id="console">Aguardando...</pre>
 
     <script>
         const API_URL = 'http://localhost:3000';
-
-        // Função para escrever na telinha preta de baixo
-        function log(mensagem) {
-            document.getElementById('console').innerText = JSON.stringify(mensagem, null, 2);
-        }
+        function log(msg) { document.getElementById('console').innerText = JSON.stringify(msg, null, 2); }
 
         async function login() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+            const res = await fetch(`${API_URL}/auth/login`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('password').value })
+            });
+            const data = await res.json();
+            if(res.ok) { localStorage.setItem('token', data.token); document.getElementById('statusLogin').innerText = "Status: Logado ✅"; }
+            log(data);
+        }
 
-            try {
-                const response = await fetch(`${API_URL}/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    // Salva o token no navegador!
-                    localStorage.setItem('token', data.token);
-                    document.getElementById('statusLogin').innerText = "Logado com sucesso!";
-                    document.getElementById('statusLogin').style.color = "green";
-                    log(data);
-                } else {
-                    log(data);
-                }
-            } catch (error) {
-                log({ erro: "A API está rodando no terminal?" });
-            }
+        async function registrar() {
+            const res = await fetch(`${API_URL}/auth/register`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('password').value })
+            });
+            log(await res.json());
         }
 
         async function criarApp() {
-            const name = document.getElementById('appName').value;
-            const token = localStorage.getItem('token');
-
-            if (!token) {
-                alert("Você precisa fazer login primeiro!");
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_URL}/apps`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        // Aqui é onde o crachá entra em ação!
-                        'Authorization': `Bearer ${token}` 
-                    },
-                    body: JSON.stringify({ name })
-                });
-
-                const data = await response.json();
-                log(data);
-            } catch (error) {
-                log({ erro: "Falha na comunicação com a API." });
-            }
-        }
-
-        async function deletarApp() {
-            const appId = document.getElementById('deleteAppId').value;
-            const token = localStorage.getItem('token');
-
-            if (!token) {
-                alert("Precisa de fazer login primeiro!");
-                return;
-            }
-
-            if (!appId) {
-                alert("Por favor, insira o ID do App que deseja deletar.");
-                return;
-            }
-
-            try {
-                // Repare que o método agora é DELETE e passamos o ID no URL
-                const response = await fetch(`${API_URL}/apps/${appId}`, {
-                    method: 'DELETE',
-                    headers: { 
-                        'Authorization': `Bearer ${token}` 
-                    }
-                });
-
-                const data = await response.json();
-                log(data);
-            } catch (error) {
-                log({ erro: "Falha na comunicação com a API." });
-            }
+            const res = await fetch(`${API_URL}/apps`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token')},
+                body: JSON.stringify({ name: document.getElementById('newAppName').value })
+            });
+            log(await res.json());
         }
 
         async function listarApps() {
-            // O navegador vai buscar a chave que guardamos no Fazer Login
-            const token = localStorage.getItem('token');
-
-            if (!token) {
-                alert("Você precisa fazer login primeiro!");
-                return;
-            }
-
-            try {
-                // Para listar, usamos o método GET na rota /apps
-                const response = await fetch(`${API_URL}/apps`, {
-                    method: 'GET',
-                    headers: { 
-                        'Authorization': `Bearer ${token}` 
-                    }
-                });
-
-                const data = await response.json();
-                
-                // Joga a lista de aplicativos na tela preta
-                log(data);
-            } catch (error) {
-                log({ erro: "Falha na comunicação com a API." });
-            }
+            const res = await fetch(`${API_URL}/apps`, { headers: {'Authorization': 'Bearer ' + localStorage.getItem('token')} });
+            const data = await res.json();
+            document.getElementById('listaApps').innerHTML = data.map(app => `
+                <div class="app-item">
+                    <span>${app.name} (${app.id.substring(0,6)}...)</span>
+                    <button style="width: auto;" onclick="document.getElementById('deployAppId').value='${app.id}'">Usar ID</button>
+                    <button class="btn-del" style="width: auto;" onclick="deletarApp('${app.id}')">Del</button>
+                </div>
+            `).join('');
+            log(data);
         }
 
-
+        async function deletarApp(id) {
+            const res = await fetch(`${API_URL}/apps/${id}`, { method: 'DELETE', headers: {'Authorization': 'Bearer ' + localStorage.getItem('token')} });
+            log(await res.json());
+            listarApps();
+        }
 
         async function fazerDeploy() {
-    const appId = document.getElementById('deployAppId').value;
-    const repositoryUrl = document.getElementById('repoUrl').value;
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-        alert("Precisa fazer login primeiro!");
-        return;
-    }
-    if (!appId || !repositoryUrl) {
-        alert("Por favor, preencha o ID do App e o link do repositório.");
-        return;
-    }
-
-    try {
-        // Dispara o POST para a rota que acabou de criar
-        const response = await fetch(`http://localhost:3000/apps/${appId}/deploy`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ repositoryUrl })
-        });
-
-        const data = await response.json();
-        log(data); // Mostra a resposta do servidor na sua caixa preta
-    } catch (error) {
-        log({ erro: "Falha na comunicação com a API." });
-    }
-}
+            const res = await fetch(`${API_URL}/apps/${document.getElementById('deployAppId').value}/deploy`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token')},
+                body: JSON.stringify({ repositoryUrl: document.getElementById('repoUrl').value })
+            });
+            log(await res.json());
+        }
     </script>
 </body>
 </html>
