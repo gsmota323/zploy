@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { authenticateUser } from "../services/authService"; 
 import { createUser } from "../services/userService";
 
+
 export async function register(req: Request, res: Response) {
   const { email, password } = req.body;
   // A lógica de hash fica dentro do service

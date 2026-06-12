@@ -1,218 +1,372 @@
-import { Worker, Job } from 'bullmq';
-import { redisConnection } from '../config/redis';
-import { spawn, exec } from 'child_process';
-import { promisify } from 'util';
-import simpleGit from 'simple-git';
-import fs from 'fs';
-import path from 'path';
-import { PrismaClient } from '@prisma/client';
+import { Worker, Job } from "bullmq";
+import { redisConnection } from "../config/redis";
+import { promisify } from "util";
+import { exec } from "child_process";
+import fs from "fs";
+import path from "path";
+import { PrismaClient } from "@prisma/client";
+import { createDeployLog } from "../services/deployLogService";
+import { runCommandWithLogs } from "../utils/runCommandWithLogs";
 
 const execAsync = promisify(exec);
-const git = simpleGit();
 const prisma = new PrismaClient();
 
-export const worker = new Worker('DeployQueue', async (job: Job) => {
-    // extração do payload recebido na mensagem do Redis  
-    const { appId, repositoryUrl, deployId } = job.data;
-    
+export const worker = new Worker(
+  "DeployQueue",
+  async (job: Job) => {
+    const { appId, repositoryUrl, deployId } = job.data as {
+      appId: string;
+      repositoryUrl: string;
+      deployId: string;
+    };
+
+    if (!appId || !repositoryUrl || !deployId) {
+      throw new Error("Payload inválido: appId, repositoryUrl ou deployId ausente.");
+    }
+
+    const tempDeployDir = path.join(__dirname, "..", "..", "temp-deploys", appId);
+
     console.log(`\n[Worker] Iniciando job ${job.id} para o App: ${appId}`);
     console.log(`[Worker] Repositório alvo: ${repositoryUrl}`);
 
-    const tempDeployDir = path.join(__dirname, '..', '..', 'temp-deploys', appId);
-
     try {
-        // verificação de existência do diretório no caso de algo residual de um deploy anterior
-        if (fs.existsSync(tempDeployDir)) {
-            console.log(`[Worker] Removendo diretório residual do deploy anterior...`);
-            fs.rmSync(tempDeployDir, { recursive: true, force: true });
-        }
+      await createDeployLog({
+        deployId,
+        type: "build",
+        level: "info",
+        message: `Worker iniciou o processamento do app ${appId}.`,
+      });
 
-        // alocação do novo diretório de trabalho
-        fs.mkdirSync(tempDeployDir, { recursive: true });
+      await prisma.deploy.update({
+        where: { id: deployId },
+        data: { status: "building" },
+      });
 
-        // transferindo o repositório remoto para o disco local
-        console.log(`[Worker] Executando git clone do repositório remoto...`);
-        await git.clone(repositoryUrl, tempDeployDir);
-        console.log(`[Worker] Repositório clonado com sucesso no caminho: ${tempDeployDir}`);
+      await prisma.app.update({
+        where: { id: appId },
+        data: { status: "building" },
+      });
 
-        // --- DA DETEÇÃO DE RUNTIME ---
-        console.log(`[Worker] Executando inspeção de sistema de arquivos para inferência de Runtime...`);
-        let runtime = '';
+      await createDeployLog({
+        deployId,
+        type: "build",
+        level: "info",
+        message: "Status atualizado para building.",
+      });
 
-        const hasPackageJson = fs.existsSync(path.join(tempDeployDir, 'package.json'));
-        const hasRequirementsTxt = fs.existsSync(path.join(tempDeployDir, 'requirements.txt'));
+      if (fs.existsSync(tempDeployDir)) {
+        await createDeployLog({
+          deployId,
+          type: "build",
+          level: "info",
+          message: "Removendo diretório residual de deploy anterior.",
+        });
 
-        if (hasPackageJson) {
-            runtime = 'Node';
-            console.log(`[Worker] Runtime detetado: Node.js (package.json localizado).`);
-        } else if (hasRequirementsTxt) {
-            runtime = 'Python';
-            console.log(`[Worker] Runtime detetado: Python (requirements.txt localizado).`);
-        } else {
-            throw new Error('Runtime não suportado. Ausência de manifestos de dependência padrão (package.json ou requirements.txt).');
-        }
-        // --- FIM DA DETEÇÃO DE RUNTIME ---
+        fs.rmSync(tempDeployDir, {
+          recursive: true,
+          force: true,
+        });
+      }
 
-        // --- GERAÇÃO DO DOCKERFILE ---
-        console.log(`[Worker] Iniciando a geração dinâmica do Dockerfile para o runtime: ${runtime}`);
-        
-        const dockerfilePath = path.join(tempDeployDir, 'Dockerfile');
-        let dockerfileContent = '';
+      fs.mkdirSync(tempDeployDir, {
+        recursive: true,
+      });
 
-        if (runtime === 'Node') {
-            dockerfileContent = `
+      await createDeployLog({
+        deployId,
+        type: "build",
+        level: "info",
+        message: `Clonando repositório: ${repositoryUrl}`,
+      });
+
+      await runCommandWithLogs({
+        command: "git",
+        args: ["clone", repositoryUrl, tempDeployDir],
+        deployId,
+        type: "build",
+      });
+
+      await createDeployLog({
+        deployId,
+        type: "build",
+        level: "info",
+        message: `Repositório clonado com sucesso em: ${tempDeployDir}`,
+      });
+
+      await createDeployLog({
+        deployId,
+        type: "build",
+        level: "info",
+        message: "Inspecionando arquivos do projeto para detectar runtime.",
+      });
+
+      let runtime: "Node" | "Python";
+
+      const hasPackageJson = fs.existsSync(path.join(tempDeployDir, "package.json"));
+      const hasRequirementsTxt = fs.existsSync(path.join(tempDeployDir, "requirements.txt"));
+
+      if (hasPackageJson) {
+        runtime = "Node";
+
+        await createDeployLog({
+          deployId,
+          type: "build",
+          level: "info",
+          message: "Runtime detectado: Node.js.",
+        });
+      } else if (hasRequirementsTxt) {
+        runtime = "Python";
+
+        await createDeployLog({
+          deployId,
+          type: "build",
+          level: "info",
+          message: "Runtime detectado: Python.",
+        });
+      } else {
+        throw new Error(
+          "Runtime não suportado. Nenhum package.json ou requirements.txt foi encontrado."
+        );
+      }
+
+      const containerPort = runtime === "Node" ? 5006 : 8000;
+
+      const dockerfilePath = path.join(tempDeployDir, "Dockerfile");
+      let dockerfileContent = "";
+
+      if (runtime === "Node") {
+        dockerfileContent = `
 FROM node:18-alpine
 WORKDIR /usr/src/app
 COPY package*.json ./
 RUN npm install
 COPY . .
-EXPOSE 3000
+ENV PORT=5006
+EXPOSE 5006
 CMD ["npm", "start"]
-            `.trim();
-        } else if (runtime === 'Python') {
-            dockerfileContent = `
+        `.trim();
+      }
+
+      if (runtime === "Python") {
+        dockerfileContent = `
 FROM python:3.9-slim
 WORKDIR /usr/src/app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
+ENV PORT=8000
 EXPOSE 8000
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-            `.trim();
-        }
+        `.trim();
+      }
 
-        fs.writeFileSync(dockerfilePath, dockerfileContent, { encoding: 'utf-8' });
-        console.log(`[Worker] Dockerfile gerado com sucesso no caminho: ${dockerfilePath}`);
-        // --- FIM DA GERAÇÃO DO DOCKERFILE ---
+      fs.writeFileSync(dockerfilePath, dockerfileContent, {
+        encoding: "utf-8",
+      });
 
-        // --- INÍCIO DO DOCKER BUILD ---
-        const imageName = `zploy-app-${appId}`;
-        console.log(`[Worker] Iniciando o Docker Build da imagem: ${imageName}...`);
+      await createDeployLog({
+        deployId,
+        type: "build",
+        level: "info",
+        message: `Dockerfile gerado com sucesso para ${runtime}. Porta interna definida: ${containerPort}.`,
+      });
 
-        // promise para controlar os eventos do "spawn"
-        await new Promise((resolve, reject) => {
-            // spawn(comando, [lista, de, argumentos])
-            const buildProcess = spawn('docker', ['build', '-t', imageName, tempDeployDir]);
+      const imageName = `zploy-app-${appId.toLowerCase()}`;
 
-            // captura os logs (Stream de Output)
-            buildProcess.stdout.on('data', (data) => {
-                console.log(`🐳 [Build] ${data.toString().trim()}`);
-            });
+      await createDeployLog({
+        deployId,
+        type: "build",
+        level: "info",
+        message: `Iniciando Docker Build da imagem: ${imageName}`,
+      });
 
-            // captura os erros (Stream de Error)
-            buildProcess.stderr.on('data', (data) => {
-                console.log(`⚠️ [Build Log] ${data.toString().trim()}`);
-            });
+      await runCommandWithLogs({
+        command: "docker",
+        args: ["build", "-t", imageName, tempDeployDir],
+        deployId,
+        type: "build",
+      });
 
-            // fechamento de processo
-            buildProcess.on('close', (code) => {
-                if (code === 0) {
-                    console.log(`✅ [Worker] Imagem Docker criada com sucesso: ${imageName}`);
-                    resolve(true); 
-                } else {
-                    reject(new Error(`O Docker Build falhou com o código de saída: ${code}`)); 
-                }
-            });
+      await createDeployLog({
+        deployId,
+        type: "build",
+        level: "info",
+        message: `Imagem Docker criada com sucesso: ${imageName}`,
+      });
+
+      await createDeployLog({
+        deployId,
+        type: "runtime",
+        level: "info",
+        message: "Preparando execução do container.",
+      });
+
+      const envVars = await prisma.envVar.findMany({
+        where: { appId },
+      });
+
+      const envArgs = envVars.flatMap((envVar) => [
+        "-e",
+        `${envVar.key}=${envVar.value}`,
+      ]);
+
+      const hostPort = Math.floor(Math.random() * (40000 - 30000) + 30000);
+      const containerName = `container-${appId}`;
+
+      await createDeployLog({
+        deployId,
+        type: "runtime",
+        level: "info",
+        message: `Container será iniciado na porta externa ${hostPort}, apontando para a porta interna ${containerPort}.`,
+      });
+
+      try {
+        await execAsync(`docker rm -f ${containerName}`);
+
+        await createDeployLog({
+          deployId,
+          type: "runtime",
+          level: "info",
+          message: `Container antigo removido: ${containerName}`,
         });
-        // --- FIM DO DOCKER BUILD ---
+      } catch {
+        await createDeployLog({
+          deployId,
+          type: "runtime",
+          level: "info",
+          message: `Nenhum container antigo encontrado com o nome: ${containerName}`,
+        });
+      }
 
+      await runCommandWithLogs({
+        command: "docker",
+        args: [
+          "run",
+          "-d",
+          ...envArgs,
+          "-e",
+          `PORT=${containerPort}`,
+          "-p",
+          `${hostPort}:${containerPort}`,
+          "--name",
+          containerName,
+          imageName,
+        ],
+        deployId,
+        type: "runtime",
+      });
 
+      const appUrl = `http://localhost:${hostPort}`;
 
-        // --- INÍCIO DO DOCKER RUN ---
-        console.log(`[Worker] A preparar para iniciar o container...`);
+      await createDeployLog({
+        deployId,
+        type: "runtime",
+        level: "info",
+        message: `App online em: ${appUrl}`,
+      });
 
-        // 1. Buscar variáveis no Prisma
-        const envVars = await prisma.envVar.findMany({ where: { appId } });
-        const envArgs = envVars.map(ev => `-e "${ev.key}=${ev.value}"`).join(' ');
+      await prisma.app.update({
+        where: { id: appId },
+        data: {
+          url: appUrl,
+          repositoryUrl,
+          status: "running",
+        },
+      });
 
-        // 2. Configurações de rede e nome
-        const containerPort = runtime === 'Node' ? 5006 : 8000;
-        const hostPort = Math.floor(Math.random() * (40000 - 30000) + 30000);
-        const containerName = `container-${appId}`;
+      await prisma.deploy.update({
+        where: { id: deployId },
+        data: {
+          status: "running",
+        },
+      });
 
-        // 3. Remove o container antigo se existir 
+      await createDeployLog({
+        deployId,
+        type: "runtime",
+        level: "info",
+        message: "Deploy finalizado com sucesso.",
+      });
+
+      if (fs.existsSync(tempDeployDir)) {
         try {
-            await execAsync(`docker rm -f ${containerName}`);
-            console.log(`[Worker] Container antigo ${containerName} removido.`);
-        } catch (e) {
-            
+          fs.rmSync(tempDeployDir, {
+            recursive: true,
+            force: true,
+          });
+
+          await createDeployLog({
+            deployId,
+            type: "build",
+            level: "info",
+            message: "Pasta temporária removida com sucesso.",
+          });
+        } catch {
+          await createDeployLog({
+            deployId,
+            type: "build",
+            level: "info",
+            message: "Aviso: não foi possível remover a pasta temporária.",
+          });
         }
+      }
 
-        // 4. Executar o comando final com as variáveis
-        console.log(`[Worker] A mapear a porta externa ${hostPort} para a porta interna ${containerPort}...`);
+      console.log(`🚀 [Worker] Deploy concluído!`);
+      console.log(`🌐 [Worker] App online em: ${appUrl}`);
 
-        const runCommand = `docker run -d ${envArgs} -p ${hostPort}:${containerPort} --name ${containerName} ${imageName}`;
-        await execAsync(runCommand);
+      return {
+        status: "sucesso",
+        porta: hostPort,
+        runtime,
+        url: appUrl,
+      };
+    } catch (error) {
+      const errorMessage = (error as Error).message;
 
-        console.log(`🚀 [Worker] Deploy concluído!`);
-        console.log(`🌐 [Worker] App online em: http://localhost:${hostPort}`);
-        // --- FIM DO DOCKER RUN ---
+      console.error(`[Worker] Falha na operação de deploy: ${errorMessage}`);
 
-        // --- INÍCIO DA ATUALIZAÇÃO DO BANCO DE DADOS ---
-        console.log(`[Worker] A guardar o link na base de dados (Prisma)...`);
-        
-        // 1. Atualiza a App com o link final e o estado 'running'
-        await prisma.app.update({
-            where: { id: appId },
-            data: { 
-                url: `http://localhost:${hostPort}`,
-                status: 'running' 
-            }
+      try {
+        await createDeployLog({
+          deployId,
+          type: "build",
+          level: "error",
+          message: `Falha no deploy: ${errorMessage}`,
         });
 
-        // 2. Atualiza o Histórico de Deploy para 'success' (se existir)
-        if (deployId) {
-            await prisma.deploy.update({
-                where: { id: deployId },
-                data: { status: 'success' }
-            });
-        }
-        // --- FIM DA ATUALIZAÇÃO DO BANCO DE DADOS ---
+        await prisma.deploy.update({
+          where: { id: deployId },
+          data: { status: "failed" },
+        });
 
-        
-        if (fs.existsSync(tempDeployDir)) {
-            try {
-                fs.rmSync(tempDeployDir, { recursive: true, force: true });
-                console.log(`🧹 [Worker] Pasta temporária limpa.`);
-            } catch (cleanupError) {
-                console.warn(`⚠️ [Worker] Aviso: Não foi possível apagar a pasta temporária, mas o deploy foi um sucesso.`);
-            }
-        }
+        await prisma.app.update({
+          where: { id: appId },
+          data: { status: "failed" },
+        });
+      } catch (dbError) {
+        console.error("[Worker] Não foi possível registrar falha no banco:", dbError);
+      }
 
-        // o retorno sinaliza ao BullMQ a transição de estado do Job para 'completed'
-        return { status: 'sucesso', porta: hostPort, runtime };
+      if (fs.existsSync(tempDeployDir)) {
+        fs.rmSync(tempDeployDir, {
+          recursive: true,
+          force: true,
+        });
+      }
 
-    } catch (error) {
-        // tratamento de exceção 
-        console.error(`[Worker] Falha na operação de deploy.`);
-        
-        // --- BÓNUS: AVISAR O BANCO DE DADOS QUE FALHOU ---
-        if (deployId) {
-            try {
-                await prisma.deploy.update({
-                    where: { id: deployId },
-                    data: { status: 'failed' }
-                });
-            } catch (dbError) {
-                console.error(`[Worker] Não foi possível atualizar o status de falha no banco:`, dbError);
-            }
-        }
-        
-        // apagando o diretório parcialmente clonado em caso de falha
-        if (fs.existsSync(tempDeployDir)) {
-             fs.rmSync(tempDeployDir, { recursive: true, force: true });
-        }
-        
-        // informa a exceção para que o Worker encerre a execução e o BullMQ transite o status do Job (failed)
-        throw new Error(`Falha no processamento: ${(error as Error).message}`); 
+      throw new Error(`Falha no processamento: ${errorMessage}`);
     }
-}, { connection: redisConnection });
+  },
+  {
+    connection: redisConnection,
+  }
+);
 
-// Listeners de eventos para monitorização do ciclo de vida do Worker
-worker.on('completed', (job, returnvalue) => {
-    console.log(`🟢 [BullMQ] Job ${job.id} 100% concluído! A App está a correr na porta ${returnvalue?.porta}.`);
+worker.on("completed", (job, returnvalue) => {
+  console.log(
+    `🟢 [BullMQ] Job ${job.id} concluído. App rodando na porta ${returnvalue?.porta}.`
+  );
 });
 
-worker.on('failed', (job, err) => {
-    console.log(`🔴 [BullMQ] Job ${job?.id} falhou. Motivo da exceção: ${err.message}`);
+worker.on("failed", (job, err) => {
+  console.log(`🔴 [BullMQ] Job ${job?.id} falhou. Motivo: ${err.message}`);
 });

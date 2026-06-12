@@ -8,15 +8,13 @@
         .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         h1 { text-align: center; color: #333; }
         h2 { color: #555; font-size: 1.1rem; }
-        input, button { padding: 10px; margin: 5px 0; width: 100%; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; border: none; }
+        input, button { padding: 10px; margin: 5px 0; width: 100%; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
         button:hover { background: #0056b3; }
         .btn-del { background: #dc3545; }
         .btn-del:hover { background: #a71d2a; }
         pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 12px; }
         .app-item { border-bottom: 1px solid #eee; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; }
-        .app-item span { font-weight: bold; color: #333; }
-        .app-actions { display: flex; gap: 10px; }
     </style>
 </head>
 <body>
@@ -24,189 +22,91 @@
     <h1>🚀 Painel ZPLOY</h1>
 
     <div class="card">
-        <h2>Auth (Login / Registro)</h2>
-        <input type="email" id="email" value="teste@zploy.com" placeholder="Email">
-        <input type="password" id="password" value="123456" placeholder="Senha">
+        <h2>Auth</h2>
+        <input type="email" id="email" value="teste" placeholder="Email">
+        <input type="password" id="password" value="123" placeholder="Senha">
         <button onclick="login()">Login</button>
-        <button style="background: #17a2b8;" onclick="registrar()">Registrar</button>
-        <p id="statusLogin" style="font-weight: bold; color: #d9534f;">Status: Deslogado ❌</p>
+        <button class="success" onclick="registrar()">Registrar</button>
+        <p id="statusLogin">Status: Deslogado</p>
     </div>
 
     <div class="card">
-        <h2>Meus Apps</h2>
+        <h2>Apps</h2>
         <input type="text" id="newAppName" placeholder="Nome do novo App">
         <button onclick="criarApp()">Criar App</button>
-        <button style="background: #6c757d;" onclick="listarApps()">Listar Meus Apps</button>
-        <div id="listaApps" style="margin-top: 15px;"></div>
+        <button onclick="listarApps()">Listar Meus Apps</button>
+        <div id="listaApps"></div>
     </div>
 
     <div class="card" style="border: 2px solid #28a745;">
-        <h2>Deploy (Fila BullMQ)</h2>
-        <input type="text" id="deployAppId" placeholder="ID do App (Preenchido automaticamente)">
-        <input type="text" id="repoUrl" value="https://github.com/treinamento-node/simple-api" placeholder="URL do Repositório GitHub">
+        <h2>Deploy (Fila Redis)</h2>
+        <input type="text" id="deployAppId" placeholder="ID do App">
+        <input type="text" id="repoUrl" value="" placeholder="URL do GitHub">
         <button style="background: #28a745;" onclick="fazerDeploy()">Disparar Deploy</button>
     </div>
 
-    <h3>Console da API <button onclick="document.getElementById('console').innerText='Aguardando...'" style="width: auto; background: #666; padding: 5px 10px; font-size: 12px;">Limpar</button></h3>
+    <h3>Consola <button onclick="document.getElementById('console').innerText='Aguardando...'" style="width: auto; background: #666;">Limpar</button></h3>
     <pre id="console">Aguardando...</pre>
-
-    <div class="card" style="border: 2px solid #00ff00; margin-top: 20px; background: #111;">
-        <h2 style="color: #00ff00;">Terminal de Logs do Container 🖥️</h2>
-        <input type="text" id="logAppId" placeholder="ID do App (Preenchido automaticamente)" style="background: #222; color: #00ff00; border: 1px solid #00ff00;">
-        <button style="background: #00ff00; color: black; font-weight: bold;" onclick="verLogs()">Ver Logs ao Vivo</button>
-        
-        <div id="terminal" style="background: black; color: #00ff00; font-family: monospace; padding: 15px; height: 300px; overflow-y: scroll; margin-top: 15px; border-radius: 5px; white-space: pre-wrap; font-size: 14px; border: 1px solid #333;">A aguardar conexão...</div>
-    </div>
 
     <script>
         const API_URL = 'http://localhost:3000';
-        
-        // Função utilitária para imprimir no console da tela
-        function log(msg) { 
-            document.getElementById('console').innerText = JSON.stringify(msg, null, 2); 
-        }
+        function log(msg) { document.getElementById('console').innerText = JSON.stringify(msg, null, 2); }
 
-        // ==========================================
-        // ROTAS DE AUTENTICAÇÃO
-        // ==========================================
         async function login() {
-            try {
-                const res = await fetch(`${API_URL}/auth/login`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('password').value })
-                });
-                const data = await res.json();
-                if(res.ok) { 
-                    localStorage.setItem('token', data.token); 
-                    document.getElementById('statusLogin').innerText = "Status: Logado ✅";
-                    document.getElementById('statusLogin').style.color = "#28a745";
-                }
-                log(data);
-            } catch (err) {
-                log("Erro ao conectar com a API.");
-            }
+            const res = await fetch(`${API_URL}/auth/login`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('password').value })
+            });
+            const data = await res.json();
+            if(res.ok) { localStorage.setItem('token', data.token); document.getElementById('statusLogin').innerText = "Status: Logado ✅"; }
+            log(data);
         }
 
         async function registrar() {
-            try {
-                const res = await fetch(`${API_URL}/auth/register`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('password').value })
-                });
-                log(await res.json());
-            } catch (err) {
-                log("Erro ao conectar com a API.");
-            }
+            const res = await fetch(`${API_URL}/auth/register`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('password').value })
+            });
+            log(await res.json());
         }
 
-        // ==========================================
-        // ROTAS DE APPS
-        // ==========================================
         async function criarApp() {
-            try {
-                const res = await fetch(`${API_URL}/apps`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token')},
-                    body: JSON.stringify({ name: document.getElementById('newAppName').value })
-                });
-                log(await res.json());
-                listarApps(); // Atualiza a lista automaticamente
-            } catch (err) {
-                log("Erro ao criar App.");
-            }
+            const res = await fetch(`${API_URL}/apps`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token')},
+                body: JSON.stringify({ name: document.getElementById('newAppName').value })
+            });
+            log(await res.json());
         }
 
         async function listarApps() {
-            try {
-                const res = await fetch(`${API_URL}/apps`, { headers: {'Authorization': 'Bearer ' + localStorage.getItem('token')} });
-                const data = await res.json();
-                
-                // MÁGICA AQUI: O botão "Usar ID" agora preenche os dois campos de uma vez!
-                document.getElementById('listaApps').innerHTML = data.map(app => `
-                    <div class="app-item">
-                        <span>${app.name} <small style="color: #888;">(${app.id.substring(0,8)}...)</small></span>
-                        <div class="app-actions">
-                            <button style="width: auto; padding: 5px 15px; font-size: 12px;" 
-                                onclick="document.getElementById('deployAppId').value='${app.id}'; document.getElementById('logAppId').value='${app.id}';">
-                                Usar ID
-                            </button>
-                            <button class="btn-del" style="width: auto; padding: 5px 15px; font-size: 12px;" onclick="deletarApp('${app.id}')">Del</button>
-                        </div>
-                    </div>
-                `).join('');
-                log(data);
-            } catch (err) {
-                log("Erro ao listar Apps.");
-            }
+            const res = await fetch(`${API_URL}/apps`, { headers: {'Authorization': 'Bearer ' + localStorage.getItem('token')} });
+            const data = await res.json();
+            document.getElementById('listaApps').innerHTML = data.map(app => `
+                <div class="app-item">
+                    <span>${app.name} (${app.id.substring(0,6)}...)</span>
+                    <button style="width: auto;" onclick="document.getElementById('deployAppId').value='${app.id}'">Usar ID</button>
+                    <button class="btn-del" style="width: auto;" onclick="deletarApp('${app.id}')">Del</button>
+                </div>
+            `).join('');
+            log(data);
         }
 
         async function deletarApp(id) {
-            try {
-                const res = await fetch(`${API_URL}/apps/${id}`, { method: 'DELETE', headers: {'Authorization': 'Bearer ' + localStorage.getItem('token')} });
-                log(await res.json());
-                listarApps(); // Atualiza a lista após deletar
-            } catch (err) {
-                log("Erro ao deletar App.");
-            }
+            const res = await fetch(`${API_URL}/apps/${id}`, { method: 'DELETE', headers: {'Authorization': 'Bearer ' + localStorage.getItem('token')} });
+            log(await res.json());
+            listarApps();
         }
 
-        // ==========================================
-        // ROTA DE DEPLOY
-        // ==========================================
         async function fazerDeploy() {
-            try {
-                const appId = document.getElementById('deployAppId').value;
-                const repoUrl = document.getElementById('repoUrl').value;
-                
-                if(!appId || !repoUrl) {
-                    log({ error: "Preencha o ID do App e a URL do repositório."});
-                    return;
-                }
-
-                const res = await fetch(`${API_URL}/apps/${appId}/deploy`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token')},
-                    body: JSON.stringify({ repositoryUrl: repoUrl })
-                });
-                log(await res.json());
-            } catch (err) {
-                log("Erro ao disparar Deploy.");
-            }
-        }
-
-        // ==========================================
-        // ROTA DE LOGS DO DOCKER
-        // ==========================================
-        async function verLogs() {
-            const appId = document.getElementById('logAppId').value;
-            const terminal = document.getElementById('terminal');
-            
-            if (!appId) {
-                terminal.innerText = ">_ ERRO: Por favor, insira o ID da App primeiro.";
-                return;
-            }
-
-            terminal.innerText = ">_ Conectando ao daemon do Docker...\n>_ Buscando logs do container...\n";
-
-            try {
-                const res = await fetch(`${API_URL}/apps/${appId}/logs`, {
-                    method: 'GET',
-                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-                });
-                
-                const data = await res.json();
-
-                if (res.ok) {
-                    terminal.innerText += "\n" + (data.logs || ">_ A aplicação iniciou, mas não gerou logs de console.");
-                    terminal.scrollTop = terminal.scrollHeight; // Rola pro fim
-                } else {
-                    terminal.innerText += "\n>_ ERRO: " + data.error;
-                }
-            } catch (err) {
-                terminal.innerText += "\n>_ FALHA CRÍTICA: Sem comunicação com a API Backend.";
-            }
+            const res = await fetch(`${API_URL}/apps/${document.getElementById('deployAppId').value}/deploy`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token')},
+                body: JSON.stringify({ repositoryUrl: document.getElementById('repoUrl').value })
+            });
+            log(await res.json());
         }
     </script>
 </body>

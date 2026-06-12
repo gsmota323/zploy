@@ -32,11 +32,25 @@ model App {
 model Deploy {
   id        String   @id @default(uuid())
   appId     String
-  status    String   // (pending, building, running, failed)
+  status    String
   logs      String?
   createdAt DateTime @default(now())
 
-  app       App      @relation(fields: [appId], references: [id], onDelete: Cascade)
+  app        App         @relation(fields: [appId], references: [id], onDelete: Cascade)
+  deployLogs DeployLog[]
+}
+
+model DeployLog {
+  id        String   @id @default(uuid())
+  deployId String
+  type      String   @default("build") // build ou runtime
+  level     String   @default("info")  // info ou error
+  message   String
+  createdAt DateTime @default(now())
+
+  deploy    Deploy   @relation(fields: [deployId], references: [id], onDelete: Cascade)
+
+  @@index([deployId, createdAt])
 }
 
 model EnvVar {

@@ -1,9 +1,10 @@
 import { Router } from 'express';
 
 import { create, list as listApps, remove as removeApp } from '../controllers/appController';
-import { startDeploy } from '../controllers/deployController'; 
+import { startDeploy, stopApp } from '../controllers/deployController'; 
 import { add as addEnv, list as listEnvs, remove as removeEnv } from '../controllers/envController';
 import { authMiddleware } from '../middlewares/authMiddleware';
+
 
 const router = Router();
 
@@ -24,4 +25,5 @@ router.post('/:appId/envs', addEnv);
 router.get('/:appId/envs', listEnvs);
 router.delete('/:appId/envs/:envId', removeEnv);
 
+router.post("/:id/stop", stopApp);
 export default router;

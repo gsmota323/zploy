@@ -1,27 +1,35 @@
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
+import * as bcrypt from "bcrypt";
+import * as jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 
-export async function authenticateUser(email: string, passwordText: string) {
-  // 1. Busca o usuário no banco pelo email
-  const user = await prisma.user.findUnique({ where: { email } });
-  
-  // Se não achar o usuário, retorna nulo
-  if (!user) return null;
+export async function authenticateUser(email: string, password: string) {
+  const user = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
 
-  // 2. Compara a senha enviada em texto com o hash salvo no banco
-  const isValidPassword = await bcrypt.compare(passwordText, user.password);
-  
-  // Se a senha estiver errada, retorna nulo
-  if (!isValidPassword) return null;
+  if (!user) {
+    return null;
+  }
 
-  // 3. Gera o Token JWT se tudo estiver correto
+  const passwordMatches = await bcrypt.compare(password, user.password);
+
+  if (!passwordMatches) {
+    return null;
+  }
+
   const token = jwt.sign(
-    { userId: user.id, email: user.email },
+    {
+      userId: user.id,
+      email: user.email,
+    },
     process.env.JWT_SECRET as string,
-    { expiresIn: '1d' } // Expira em 1 dia
+    {
+      expiresIn: "1d",
+    }
   );
 
   return token;
