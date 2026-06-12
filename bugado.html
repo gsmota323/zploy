@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel ZPLOY - TCC</title>
+    <style>
+        :root {
+            --bg: #eef3f8; --surface: #ffffff; --surface-soft: #f8fafc;
+            --text: #172033; --muted: #64748b; --border: #dbe4ef;
+            --primary: #2563eb; --primary-hover: #1d4ed8;
+            --success: #16a34a; --danger: #dc2626; --danger-hover: #b91c1c;
+            --terminal-bg: #07120b; --terminal-text: #7cff9b;
+            --radius: 16px; --shadow: 0 16px 45px rgba(15, 23, 42, 0.08);
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: "Segoe UI", sans-serif; background: var(--bg); color: var(--text); padding: 32px 16px; }
+        .container { width: min(900px, 100%); margin: 0 auto; }
+        .card { background: var(--surface); padding: 22px; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-soft); margin-bottom: 14px; }
+        button { padding: 10px 16px; border: 0; border-radius: 10px; background: var(--primary); color: #fff; font-weight: 800; cursor: pointer; transition: 0.2s; margin: 4px; }
+        button:hover { background: var(--primary-hover); }
+        .btn-del { background: var(--danger); }
+        .btn-del:hover { background: var(--danger-hover); }
+        .btn-success { background: var(--success); }
+        #terminal { height: 300px; padding: 16px; background: var(--terminal-bg); color: var(--terminal-text); border: 1px solid #1f6f3a; border-radius: 12px; font-family: monospace; overflow-y: auto; white-space: pre-wrap; margin-top: 10px; }
+        pre { background: #111827; color: #e5e7eb; padding: 16px; border-radius: 12px; font-family: monospace; font-size: 0.85rem; overflow-x: auto; }
+        .app-item { display: flex; justify-content: space-between; align-items: center; padding: 14px; border-bottom: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>🚀 Painel ZPLOY</h1>
+
+        <div class="card">
+            <h2>🔐 Auth</h2>
+            <input type="email" id="email" value="admin@tcc.com" placeholder="Email">
+<input type="password" id="password" value="123456" placeholder="Senha">
+            <button onclick="login()">Login</button>
+            <p id="statusLogin" style="margin-top: 10px; font-weight: bold; color: var(--muted);">Status: Deslogado ❌</p>
+        </div>
+
+        <div class="card">
+            <h2>📦 Meus Apps</h2>
+            <input type="text" id="newAppName" placeholder="Nome do novo app">
+            <button onclick="criarApp()">Criar App</button>
+            <button style="background: #64748b;" onclick="listarApps()">Listar Apps</button>
+            <div id="listaApps"></div>
+        </div>
+
+        <div class="card">
+            <h2>🚢 Deploy & Logs</h2>
+            <input type="text" id="deployAppId" placeholder="ID do App">
+            <input type="text" id="repoUrl" value="" placeholder="URL do GitHub">
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-success" style="flex: 1;" onclick="fazerDeploy()">Disparar Deploy</button>
+                <button class="btn-del" style="flex: 1;" onclick="pararApp()">Parar Container</button>
+            </div>
+            
+            <button style="background: #000; width: 100%; margin-top: 10px;" onclick="verLogs()">Ver Logs do Container</button>
+            <div id="terminal">A aguardar conexão...</div>
+        </div>
+
+        <pre id="console">Console da API...</pre>
+    </main>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+        function log(msg) { document.getElementById('console').innerText = typeof msg === 'object' ? JSON.stringify(msg, null, 2) : msg; }
+
+        async function login() {
+            try {
+                const res = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('password').value })
+                });
+                const data = await res.json();
+                if(res.ok) { 
+                    localStorage.setItem('token', data.token); 
+                    const status = document.getElementById('statusLogin');
+                    status.innerText = "Status: Logado ✅";
+                    status.style.color = "#16a34a";
+                }
+                log(data);
+            } catch (err) { log("Erro de conexão: " + err); }
+        }
+
+        async function criarApp() {
+            const res = await fetch(`${API_URL}/apps`, {
+                method: 'POST', headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token')},
+                body: JSON.stringify({ name: document.getElementById('newAppName').value })
+            });
+            log(await res.json());
+            listarApps();
+        }
+
+        async function listarApps() {
+            const res = await fetch(`${API_URL}/apps`, { headers: {'Authorization': 'Bearer ' + localStorage.getItem('token')} });
+            const data = await res.json();
+            document.getElementById('listaApps').innerHTML = data.map(app => `
+                <div class="app-item">
+                    <span>${app.name}</span>
+                    <div>
+                        <button style="padding: 5px 10px;" onclick="document.getElementById('deployAppId').value='${app.id}'">Usar ID</button>
+                        <button class="btn-del" style="padding: 5px 10px;" onclick="deletarApp('${app.id}')">Del</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function deletarApp(id) {
+            await fetch(`${API_URL}/apps/${id}`, { method: 'DELETE', headers: {'Authorization': 'Bearer ' + localStorage.getItem('token')} });
+            await fetch(`${API_URL}/apps/${id}/stop`, { method: 'DELETE', headers: {'Authorization': 'Bearer ' + localStorage.getItem('token')} });
+            listarApps();
+        }
+
+        async function pararApp() {
+            const appId = document.getElementById('deployAppId').value;
+            if(!appId) { log("Erro: ID vazio"); return; }
+            try {
+                const res = await fetch(`${API_URL}/apps/${appId}/stop`, { 
+                    method: 'DELETE', headers: {'Authorization': 'Bearer ' + localStorage.getItem('token')} 
+                });
+                log(await res.json());
+                document.getElementById('terminal').innerText = ">_ Container parado com sucesso!";
+            } catch (err) { log("Erro ao parar: " + err); }
+        }
+
+        async function fazerDeploy() {
+            const appId = document.getElementById('deployAppId').value;
+            const res = await fetch(`${API_URL}/apps/${appId}/deploy`, {
+                method: 'POST', headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token')},
+                body: JSON.stringify({ repositoryUrl: document.getElementById('repoUrl').value })
+            });
+            log(await res.json());
+        }
+
+        async function verLogs() {
+            const appId = document.getElementById('deployAppId').value;
+            try {
+                const res = await fetch(`${API_URL}/apps/${appId}/logs`, { headers: {'Authorization': 'Bearer ' + localStorage.getItem('token')} });
+                const data = await res.json();
+                document.getElementById('terminal').innerText = data.logs || data.error || "Sem logs disponíveis.";
+            } catch (err) { document.getElementById('terminal').innerText = "FALHA: Verifique o CORS ou a API."; }
+        }
+    </script>
+</body>
+</html>

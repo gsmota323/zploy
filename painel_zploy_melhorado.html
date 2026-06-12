@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel ZPLOY - TCC Completo</title>
+    <style>
+        :root {
+            --bg: #eef3f8;
+            --surface: #ffffff;
+            --surface-soft: #f8fafc;
+            --text: #172033;
+            --muted: #64748b;
+            --border: #dbe4ef;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --info: #0891b2;
+            --success: #16a34a;
+            --success-hover: #15803d;
+            --danger: #dc2626;
+            --danger-hover: #b91c1c;
+            --neutral: #475569;
+            --neutral-hover: #334155;
+            --terminal-bg: #07120b;
+            --terminal-text: #7cff9b;
+            --shadow: 0 16px 45px rgba(15, 23, 42, 0.08);
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", Roboto, Arial, sans-serif;
+            background: radial-gradient(circle at top, #dbeafe 0, var(--bg) 40%, #f8fafc 100%);
+            color: var(--text);
+        }
+
+        .container {
+            width: min(1100px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 32px 0 48px;
+        }
+
+        .hero {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 24px;
+            padding: 24px;
+            border: 1px solid rgba(37, 99, 235, 0.14);
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.72);
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow);
+        }
+
+        h1, h2, h3, p {
+            margin-top: 0;
+        }
+
+        h1 {
+            margin-bottom: 6px;
+            font-size: clamp(2rem, 4vw, 3rem);
+            letter-spacing: -0.04em;
+        }
+
+        .subtitle {
+            margin-bottom: 0;
+            color: var(--muted);
+            font-size: 1rem;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .panel-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+            align-items: start;
+        }
+
+        .card {
+            background: var(--surface);
+            padding: 22px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        .card.full {
+            grid-column: 1 / -1;
+        }
+
+        .card.deploy-card {
+            border-left: 6px solid var(--success);
+        }
+
+        .card.terminal-card {
+            background: #0f172a;
+            color: #e2e8f0;
+            border-color: #1e293b;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        h2, h3 {
+            margin-bottom: 0;
+            font-size: 1.1rem;
+            letter-spacing: -0.01em;
+        }
+
+        .hint {
+            margin-bottom: 18px;
+            color: var(--muted);
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #334155;
+            font-size: 0.88rem;
+            font-weight: 700;
+        }
+
+        .field {
+            margin-bottom: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface-soft);
+            color: var(--text);
+            font-size: 0.96rem;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: #ffffff;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+        }
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 42px;
+            padding: 10px 16px;
+            border: 0;
+            border-radius: 10px;
+            background: var(--primary);
+            color: #ffffff;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.18);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .actions button {
+            flex: 1;
+        }
+
+        .btn-info { background: var(--info); }
+        .btn-info:hover { background: #0e7490; }
+
+        .btn-success { background: var(--success); }
+        .btn-success:hover { background: var(--success-hover); }
+
+        .btn-neutral { background: var(--neutral); }
+        .btn-neutral:hover { background: var(--neutral-hover); }
+
+        .btn-del { background: var(--danger); }
+        .btn-del:hover { background: var(--danger-hover); }
+
+        .btn-small {
+            min-height: 34px;
+            width: auto;
+            padding: 7px 12px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 16px 0 0;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: #fef2f2;
+            color: #b91c1c;
+            font-weight: 800;
+        }
+
+        #listaApps {
+            margin-top: 16px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--surface-soft);
+        }
+
+        .app-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            padding: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .app-item:last-child {
+            border-bottom: 0;
+        }
+
+        .app-item span {
+            min-width: 0;
+            color: var(--text);
+            font-weight: 800;
+            overflow-wrap: anywhere;
+        }
+
+        .app-item small {
+            display: inline-block;
+            margin-left: 6px;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .app-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .console-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        pre, #terminal {
+            margin: 0;
+            border-radius: 12px;
+            font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        pre {
+            min-height: 150px;
+            padding: 16px;
+            overflow-x: auto;
+            background: #111827;
+            color: #e5e7eb;
+            border: 1px solid #1f2937;
+            font-size: 0.88rem;
+        }
+
+        .terminal-card label {
+            color: #cbd5e1;
+        }
+
+        .terminal-card input {
+            background: #020617;
+            color: var(--terminal-text);
+            border-color: #1f6f3a;
+        }
+
+        .terminal-card input:focus {
+            border-color: var(--terminal-text);
+            box-shadow: 0 0 0 4px rgba(124, 255, 155, 0.12);
+        }
+
+        #terminal {
+            height: 320px;
+            padding: 16px;
+            overflow-y: auto;
+            background: var(--terminal-bg);
+            color: var(--terminal-text);
+            border: 1px solid #1f6f3a;
+            font-size: 0.9rem;
+        }
+
+        .terminal-card .hint {
+            color: #94a3b8;
+        }
+
+        @media (max-width: 780px) {
+            .hero {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .panel-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .actions,
+            .app-item {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .app-actions {
+                width: 100%;
+            }
+
+            .app-actions button {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <header class="hero">
+            <div>
+                <h1>🚀 Painel ZPLOY</h1>
+                <p class="subtitle">Interface de testes para autenticação, apps, deploys e logs do seu mini PaaS.</p>
+            </div>
+            <span class="badge">TCC • Ambiente local</span>
+        </header>
+
+        <section class="panel-grid">
+            <div class="card">
+                <div class="section-title">
+                    <h2>🔐 Auth</h2>
+                </div>
+                <p class="hint">Faça login ou registre um usuário para salvar o token no navegador.</p>
+
+                <div class="field">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" value="teste@zploy.com" placeholder="Email">
+                </div>
+
+                <div class="field">
+                    <label for="password">Senha</label>
+                    <input type="password" id="password" value="123456" placeholder="Senha">
+                </div>
+
+                <div class="actions">
+                    <button onclick="login()">Login</button>
+                    <button class="btn-info" onclick="registrar()">Registrar</button>
+                </div>
+
+                <p id="statusLogin" class="status">Status: Deslogado ❌</p>
+            </div>
+
+            <div class="card">
+                <div class="section-title">
+                    <h2>📦 Meus Apps</h2>
+                </div>
+                <p class="hint">Crie apps, liste os existentes e use o ID selecionado para deploy ou logs.</p>
+
+                <div class="field">
+                    <label for="newAppName">Nome do novo app</label>
+                    <input type="text" id="newAppName" placeholder="Ex: minha-api-node">
+                </div>
+
+                <div class="actions">
+                    <button onclick="criarApp()">Criar App</button>
+                    <button class="btn-neutral" onclick="listarApps()">Listar Apps</button>
+                </div>
+
+                <div id="listaApps"></div>
+            </div>
+
+            <div class="card deploy-card full">
+                <div class="section-title">
+                    <h2>🚢 Deploy</h2>
+                </div>
+                <p class="hint">Envie um repositório para a fila BullMQ e acompanhe o retorno no console da API.</p>
+
+                <div class="field">
+                    <label for="deployAppId">ID do App</label>
+                    <input type="text" id="deployAppId" placeholder="ID do App (preenchido automaticamente ao clicar em Usar ID)">
+                </div>
+
+                <div class="field">
+                    <label for="repoUrl">URL do repositório GitHub</label>
+                    <input type="text" id="repoUrl" value="https://github.com/treinamento-node/simple-api" placeholder="URL do Repositório GitHub">
+                </div>
+
+                <button class="btn-success" onclick="fazerDeploy()">Disparar Deploy</button>
+            </div>
+
+            <div class="card full">
+                <div class="console-header">
+                    <h3>🧾 Console da API</h3>
+                    <button class="btn-small btn-neutral" onclick="document.getElementById('console').innerText='Aguardando...';">Limpar</button>
+                </div>
+                <pre id="console">Aguardando...</pre>
+            </div>
+
+            <div class="card terminal-card full">
+                <div class="section-title">
+                    <h2>🖥️ Terminal de Logs do Container</h2>
+                </div>
+                <p class="hint">Busque os logs do container associado ao app selecionado.</p>
+
+                <div class="field">
+                    <label for="logAppId">ID do App</label>
+                    <input type="text" id="logAppId" placeholder="ID do App (preenchido automaticamente ao clicar em Usar ID)">
+                </div>
+
+                <button class="btn-success" onclick="verLogs()">Ver Logs</button>
+
+                <div id="terminal">A aguardar conexão...</div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+        
+        // Função utilitária para imprimir no console da tela
+        function log(msg) { 
+            document.getElementById('console').innerText = typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2); 
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // ==========================================
+        // ROTAS DE AUTENTICAÇÃO
+        // ==========================================
+        async function login() {
+            try {
+                const res = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('password').value })
+                });
+                const data = await res.json();
+                if(res.ok) { 
+                    localStorage.setItem('token', data.token); 
+                    document.getElementById('statusLogin').innerText = "Status: Logado ✅";
+                    document.getElementById('statusLogin').style.color = "#166534";
+                    document.getElementById('statusLogin').style.background = "#dcfce7";
+                }
+                log(data);
+            } catch (err) {
+                log("Erro ao conectar com a API.");
+            }
+        }
+
+        async function registrar() {
+            try {
+                const res = await fetch(`${API_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('password').value })
+                });
+                log(await res.json());
+            } catch (err) {
+                log("Erro ao conectar com a API.");
+            }
+        }
+
+        // ==========================================
+        // ROTAS DE APPS
+        // ==========================================
+        async function criarApp() {
+            try {
+                const res = await fetch(`${API_URL}/apps`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token')},
+                    body: JSON.stringify({ name: document.getElementById('newAppName').value })
+                });
+                log(await res.json());
+                listarApps(); // Atualiza a lista automaticamente
+            } catch (err) {
+                log("Erro ao criar App.");
+            }
+        }
+
+        async function listarApps() {
+            try {
+                const res = await fetch(`${API_URL}/apps`, { headers: {'Authorization': 'Bearer ' + localStorage.getItem('token')} });
+                const data = await res.json();
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    document.getElementById('listaApps').innerHTML = `<div class="app-item"><span>Nenhum app encontrado.</span></div>`;
+                    log(data);
+                    return;
+                }
+                
+                // O botão "Usar ID" preenche os campos de deploy e logs de uma vez.
+                document.getElementById('listaApps').innerHTML = data.map(app => `
+                    <div class="app-item">
+                        <span>${escapeHtml(app.name)} <small>(${escapeHtml(app.id.substring(0,8))}...)</small></span>
+                        <div class="app-actions">
+                            <button class="btn-small" 
+                                onclick="document.getElementById('deployAppId').value='${app.id}'; document.getElementById('logAppId').value='${app.id}';">
+                                Usar ID
+                            </button>
+                            <button class="btn-small btn-del" onclick="deletarApp('${app.id}')">Del</button>
+                        </div>
+                    </div>
+                `).join('');
+                log(data);
+            } catch (err) {
+                log("Erro ao listar Apps.");
+            }
+        }
+
+        async function deletarApp(id) {
+            try {
+                const res = await fetch(`${API_URL}/apps/${id}`, { method: 'DELETE', headers: {'Authorization': 'Bearer ' + localStorage.getItem('token')} });
+                log(await res.json());
+                listarApps(); // Atualiza a lista após deletar
+            } catch (err) {
+                log("Erro ao deletar App.");
+            }
+        }
+
+        // ==========================================
+        // ROTA DE DEPLOY
+        // ==========================================
+        async function fazerDeploy() {
+            try {
+                const appId = document.getElementById('deployAppId').value;
+                const repoUrl = document.getElementById('repoUrl').value;
+                
+                if(!appId || !repoUrl) {
+                    log({ error: "Preencha o ID do App e a URL do repositório."});
+                    return;
+                }
+
+                const res = await fetch(`${API_URL}/apps/${appId}/deploy`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token')},
+                    body: JSON.stringify({ repositoryUrl: repoUrl })
+                });
+                log(await res.json());
+            } catch (err) {
+                log("Erro ao disparar Deploy.");
+            }
+        }
+
+        // ==========================================
+        // ROTA DE LOGS DO DOCKER
+        // ==========================================
+        async function verLogs() {
+            const appId = document.getElementById('logAppId').value;
+            const terminal = document.getElementById('terminal');
+            
+            if (!appId) {
+                terminal.innerText = ">_ ERRO: Por favor, insira o ID da App primeiro.";
+                return;
+            }
+
+            terminal.innerText = ">_ Conectando ao daemon do Docker...\n>_ Buscando logs do container...\n";
+
+            try {
+                const res = await fetch(`${API_URL}/apps/${appId}/logs`, {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                });
+                
+                const data = await res.json();
+
+                if (res.ok) {
+                    terminal.innerText += "\n" + (data.logs || ">_ A aplicação iniciou, mas não gerou logs de console.");
+                    terminal.scrollTop = terminal.scrollHeight; // Rola pro fim
+                } else {
+                    terminal.innerText += "\n>_ ERRO: " + data.error;
+                }
+            } catch (err) {
+                terminal.innerText += "\n>_ FALHA CRÍTICA: Sem comunicação com a API Backend.";
+            }
+        }
+    </script>
+</body>
+</html>
