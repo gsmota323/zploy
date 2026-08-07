@@ -7,6 +7,7 @@ import path from "path";
 import { PrismaClient } from "@prisma/client";
 import { createDeployLog } from "../services/deployLogService";
 import { runCommandWithLogs } from "../utils/runCommandWithLogs";
+import { deployToKubernetes } from "../utils/kubernetes";
 
 const execAsync = promisify(exec);
 const prisma = new PrismaClient();
@@ -206,69 +207,97 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
         message: "Iniciando aplicação.",
       });
 
+      const app = await prisma.app.findUnique({ where: { id: appId } });
       const envVars = await prisma.envVar.findMany({
         where: { appId },
       });
 
-      const envArgs = envVars.flatMap((envVar) => [
-        "-e",
-        `${envVar.key}=${envVar.value}`,
-      ]);
-
-      const hostPort = Math.floor(Math.random() * (40000 - 30000) + 30000);
-      const containerName = `container-${appId}`;
-
-      console.log(`[Worker] Container: ${containerName}`);
-      console.log(`[Worker] Porta externa: ${hostPort}`);
-      console.log(`[Worker] Porta interna: ${containerPort}`);
+      let appUrl = "";
+      let deploymentSucceeded = false;
+      let hostPort = 0;
 
       try {
-        await execAsync(`docker rm -f ${containerName}`);
-        console.log(`[Worker] Container anterior removido: ${containerName}`);
+        const k8sResult = await deployToKubernetes({
+          appId,
+          appName: app?.name || "app",
+          imageName,
+          containerPort,
+          envVars: envVars.map((envVar) => ({ key: envVar.key, value: envVar.value })),
+          deployId,
+        });
+
+        appUrl = k8sResult.url || "http://127.0.0.1";
+        deploymentSucceeded = true;
 
         await createDeployLog({
           deployId,
           type: "runtime",
           level: "info",
-          message: "Versão anterior da aplicação encerrada.",
+          message: `Aplicação publicada no Kubernetes: ${appUrl}`,
         });
-      } catch {
-        console.log(`[Worker] Nenhum container anterior encontrado: ${containerName}`);
-      }
+      } catch (k8sError) {
+        console.warn("[Worker] Kubernetes indisponível, usando fallback com Docker:", k8sError);
 
-      await runCommandWithLogs({
-        command: "docker",
-        args: [
-          "run",
-          "-d",
-          ...envArgs,
+        const envArgs = envVars.flatMap((envVar) => [
           "-e",
-          `PORT=${containerPort}`,
-          "-p",
-          `${hostPort}:${containerPort}`,
-          "--name",
-          containerName,
-          imageName,
-        ],
-        deployId,
-        type: "runtime",
-      });
+          `${envVar.key}=${envVar.value}`,
+        ]);
 
-      const appUrl = `http://localhost:${hostPort}`;
+        hostPort = Math.floor(Math.random() * (40000 - 30000) + 30000);
+        const containerName = `container-${appId}`;
 
-      await createDeployLog({
-        deployId,
-        type: "runtime",
-        level: "info",
-        message: `Aplicação online em: ${appUrl}`,
-      });
+        console.log(`[Worker] Container: ${containerName}`);
+        console.log(`[Worker] Porta externa: ${hostPort}`);
+        console.log(`[Worker] Porta interna: ${containerPort}`);
+
+        try {
+          await execAsync(`docker rm -f ${containerName}`);
+          console.log(`[Worker] Container anterior removido: ${containerName}`);
+
+          await createDeployLog({
+            deployId,
+            type: "runtime",
+            level: "info",
+            message: "Versão anterior da aplicação encerrada.",
+          });
+        } catch {
+          console.log(`[Worker] Nenhum container anterior encontrado: ${containerName}`);
+        }
+
+        await runCommandWithLogs({
+          command: "docker",
+          args: [
+            "run",
+            "-d",
+            ...envArgs,
+            "-e",
+            `PORT=${containerPort}`,
+            "-p",
+            `${hostPort}:${containerPort}`,
+            "--name",
+            containerName,
+            imageName,
+          ],
+          deployId,
+          type: "runtime",
+        });
+
+        appUrl = `http://localhost:${hostPort}`;
+
+        await createDeployLog({
+          deployId,
+          type: "runtime",
+          level: "info",
+          message: `Aplicação online em: ${appUrl}`,
+        });
+      }
 
       await prisma.app.update({
         where: { id: appId },
         data: {
           url: appUrl,
           repositoryUrl,
-          status: "running",
+          status: deploymentSucceeded ? "running" : "running",
         },
       });
 

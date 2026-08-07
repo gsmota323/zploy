@@ -5,6 +5,7 @@ import authRoutes from "./routes/authRoutes";
 import appRoutes from "./routes/appRoutes";
 import './workers/deployWorker';
 import deployRoutes from "./routes/deployRoutes";
+import kubernetesRoutes from "./routes/kubernetesRoutes";
 
 const app = express();
 
@@ -20,5 +21,6 @@ app.get("/", (req, res) => {
 });
 
 app.use("/deploys", deployRoutes);
+app.use("/kubernetes", kubernetesRoutes);
 
 export default app;

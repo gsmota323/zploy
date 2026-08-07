@@ -1,0 +1,26 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { buildDeploymentName, buildKubernetesManifests, resolveNamespace } from "./kubernetes";
+
+test("resolveNamespace usa o namespace configurado no ambiente", () => {
+  process.env.KUBERNETES_NAMESPACE = "staging";
+  assert.equal(resolveNamespace(), "staging");
+});
+
+test("buildDeploymentName gera um nome estável para o deployment", () => {
+  assert.equal(buildDeploymentName("Meu App", "123456"), "meu-app-123456");
+});
+
+test("buildKubernetesManifests inclui o namespace no manifesto", () => {
+  const manifest = buildKubernetesManifests({
+    appId: "123456",
+    appName: "Meu App",
+    imageName: "zploy-app:latest",
+    containerPort: 5006,
+    envVars: [{ key: "FOO", value: "bar" }],
+    namespace: "demo",
+  });
+
+  assert.match(manifest, /namespace: demo/);
+  assert.match(manifest, /name: meu-app-123456/);
+});

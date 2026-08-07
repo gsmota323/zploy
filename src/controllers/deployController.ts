@@ -100,6 +100,7 @@ export async function startDeploy(req: AuthRequest, res: Response) {
 export async function listarLogsDeploy(req: AuthRequest, res: Response) {
   try {
     const { deployId } = req.params;
+    const deployIdParam = Array.isArray(deployId) ? deployId[0] : deployId;
     const userId = req.userId;
 
     if (!userId) {
@@ -110,7 +111,7 @@ export async function listarLogsDeploy(req: AuthRequest, res: Response) {
 
     const deploy = await prisma.deploy.findFirst({
       where: {
-        id: deployId,
+        id: deployIdParam,
         app: {
           userId,
         },
@@ -123,7 +124,7 @@ export async function listarLogsDeploy(req: AuthRequest, res: Response) {
       });
     }
 
-    const logs = await getDeployLogs(deployId);
+    const logs = await getDeployLogs(deployIdParam);
 
     return res.json(logs);
   } catch (error) {
@@ -139,6 +140,7 @@ export async function listarLogsDeploy(req: AuthRequest, res: Response) {
 export async function stopApp(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
+    const appIdParam = Array.isArray(id) ? id[0] : id;
     const userId = req.userId;
 
     if (!userId) {
@@ -149,7 +151,7 @@ export async function stopApp(req: AuthRequest, res: Response) {
 
     const app = await prisma.app.findFirst({
       where: {
-        id,
+        id: appIdParam,
         userId,
       },
     });
