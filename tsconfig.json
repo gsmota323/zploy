@@ -6,8 +6,8 @@
     "outDir": "./dist",
     "esModuleInterop": true,
     "strict": true,
-    "forceConsistentCasingInFileNames": true
-
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node"]
   },
   "exclude": [
     "prisma.config.ts"

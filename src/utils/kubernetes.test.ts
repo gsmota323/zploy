@@ -11,7 +11,7 @@ test("buildDeploymentName gera um nome estável para o deployment", () => {
   assert.equal(buildDeploymentName("Meu App", "123456"), "meu-app-123456");
 });
 
-test("buildKubernetesManifests inclui o namespace no manifesto", () => {
+test("buildKubernetesManifests inclui o namespace no manifest", () => {
   const manifest = buildKubernetesManifests({
     appId: "123456",
     appName: "Meu App",
@@ -23,4 +23,24 @@ test("buildKubernetesManifests inclui o namespace no manifesto", () => {
 
   assert.match(manifest, /namespace: demo/);
   assert.match(manifest, /name: meu-app-123456/);
+});
+
+test("buildKubernetesManifests inclui autoscaling por CPU", () => {
+  const manifest = buildKubernetesManifests({
+    appId: "123456",
+    appName: "Meu App",
+    imageName: "zploy-app:latest",
+    containerPort: 5006,
+    envVars: [{ key: "FOO", value: "bar" }],
+    namespace: "demo",
+    minReplicas: 2,
+    maxReplicas: 6,
+    targetCPUUtilizationPercentage: 70,
+  });
+
+  assert.match(manifest, /kind: HorizontalPodAutoscaler/);
+  assert.match(manifest, /minReplicas: 2/);
+  assert.match(manifest, /maxReplicas: 6/);
+  assert.match(manifest, /averageUtilization: 70/);
+  assert.match(manifest, /cpu: "100m"/);
 });

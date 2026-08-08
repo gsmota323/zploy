@@ -30,6 +30,32 @@ export function resolveNamespace(namespace?: string) {
   return namespace || process.env.KUBERNETES_NAMESPACE || "default";
 }
 
+export function resolveAutoscalingConfig({
+  minReplicas,
+  maxReplicas,
+  targetCPUUtilizationPercentage,
+}: {
+  minReplicas?: number;
+  maxReplicas?: number;
+  targetCPUUtilizationPercentage?: number;
+} = {}) {
+  const resolvedMinReplicas = Number(
+    minReplicas ?? Number(process.env.KUBERNETES_MIN_REPLICAS ?? 1)
+  );
+  const resolvedMaxReplicas = Number(
+    maxReplicas ?? Number(process.env.KUBERNETES_MAX_REPLICAS ?? 3)
+  );
+  const resolvedTargetCPU = Number(
+    targetCPUUtilizationPercentage ?? Number(process.env.KUBERNETES_CPU_TARGET ?? 70)
+  );
+
+  return {
+    minReplicas: Number.isFinite(resolvedMinReplicas) ? resolvedMinReplicas : 1,
+    maxReplicas: Number.isFinite(resolvedMaxReplicas) ? resolvedMaxReplicas : 3,
+    targetCPUUtilizationPercentage: Number.isFinite(resolvedTargetCPU) ? resolvedTargetCPU : 70,
+  };
+}
+
 export function buildDeploymentName(appName: string, appId: string) {
   return `${slugify(appName || "app")}-${appId.slice(0, 6)}`;
 }
@@ -41,6 +67,9 @@ export function buildKubernetesManifests({
   containerPort,
   envVars,
   namespace = "default",
+  minReplicas,
+  maxReplicas,
+  targetCPUUtilizationPercentage,
 }: {
   appId: string;
   appName: string;
@@ -48,8 +77,16 @@ export function buildKubernetesManifests({
   containerPort: number;
   envVars: KubernetesEnvVar[];
   namespace?: string;
+  minReplicas?: number;
+  maxReplicas?: number;
+  targetCPUUtilizationPercentage?: number;
 }) {
   const deploymentName = buildDeploymentName(appName, appId);
+  const autoscaling = resolveAutoscalingConfig({
+    minReplicas,
+    maxReplicas,
+    targetCPUUtilizationPercentage,
+  });
 
   const envEntries = envVars
     .map((envVar) => `            - name: ${envVar.key}\n              value: ${JSON.stringify(envVar.value)}`)
@@ -61,7 +98,7 @@ metadata:
   name: ${deploymentName}
   namespace: ${namespace}
 spec:
-  replicas: 1
+  replicas: ${autoscaling.minReplicas}
   selector:
     matchLabels:
       app: ${deploymentName}
@@ -76,6 +113,11 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: ${containerPort}
+          resources:
+            requests:
+              cpu: "100m"
+            limits:
+              cpu: "500m"
           env:
             - name: PORT
               value: "${containerPort}"
@@ -92,6 +134,26 @@ spec:
     - port: 80
       targetPort: ${containerPort}
   type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${deploymentName}
+  namespace: ${namespace}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${deploymentName}
+  minReplicas: ${autoscaling.minReplicas}
+  maxReplicas: ${autoscaling.maxReplicas}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: ${autoscaling.targetCPUUtilizationPercentage}
 `;
 }
 
@@ -103,6 +165,9 @@ export async function deployToKubernetes({
   envVars,
   deployId,
   namespace,
+  minReplicas,
+  maxReplicas,
+  targetCPUUtilizationPercentage,
 }: {
   appId: string;
   appName: string;
@@ -111,14 +176,17 @@ export async function deployToKubernetes({
   envVars: KubernetesEnvVar[];
   deployId: string;
   namespace?: string;
+  minReplicas?: number;
+  maxReplicas?: number;
+  targetCPUUtilizationPercentage?: number;
 }): Promise<KubernetesDeploymentResult> {
   const deploymentName = buildDeploymentName(appName, appId);
   const resolvedNamespace = resolveNamespace(namespace);
-  const manfiestDir = path.join(process.cwd(), "kubernetes", "manifests", appId);
+  const manifestDir = path.join(process.cwd(), "kubernetes", "manifests", appId);
 
-  fs.mkdirSync(manfiestDir, { recursive: true });
+  fs.mkdirSync(manifestDir, { recursive: true });
 
-  const manifestPath = path.join(manfiestDir, `${deploymentName}.yaml`);
+  const manifestPath = path.join(manifestDir, `${deploymentName}.yaml`);
   const manifestContent = buildKubernetesManifests({
     appId,
     appName,
@@ -126,6 +194,9 @@ export async function deployToKubernetes({
     containerPort,
     envVars,
     namespace: resolvedNamespace,
+    minReplicas,
+    maxReplicas,
+    targetCPUUtilizationPercentage,
   });
 
   fs.writeFileSync(manifestPath, manifestContent, { encoding: "utf-8" });
@@ -135,7 +206,7 @@ export async function deployToKubernetes({
       deployId,
       type: "runtime",
       level: "info",
-      message: `Publicando manifest Kubernetes em ${manifestPath} no namespace ${resolvedNamespace}`,
+      message: `Publicando o manifest do Kubernetes em ${manifestPath} no namespace ${resolvedNamespace}`,
     });
 
     await execFileAsync("kubectl", ["apply", "-f", manifestPath], {
