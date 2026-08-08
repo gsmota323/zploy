@@ -2,12 +2,23 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function createApp(name: string, userId: string) {
+export async function createApp(
+  name: string,
+  userId: string,
+  config?: {
+    minReplicas?: number;
+    maxReplicas?: number;
+    targetCPUUtilizationPercentage?: number;
+  }
+) {
   // Cria o app já amarrado ao ID do usuário logado
   return await prisma.app.create({
     data: {
       name,
       userId,
+      minReplicas: config?.minReplicas ?? 1,
+      maxReplicas: config?.maxReplicas ?? 3,
+      targetCPUUtilizationPercentage: config?.targetCPUUtilizationPercentage ?? 70,
     },
   });
 }

@@ -17,14 +17,17 @@ model User {
 }
 
 model App {
-  id            String   @id @default(uuid())
-  name          String   @unique 
-  userId        String
-  repositoryUrl String?   
-  status        String   @default("pending") 
-  url           String?
-  createdAt     DateTime @default(now())
-  
+  id                            String   @id @default(uuid())
+  name                          String   @unique
+  userId                        String
+  repositoryUrl                 String?
+  status                        String   @default("pending")
+  url                           String?
+  minReplicas                   Int      @default(1)
+  maxReplicas                   Int      @default(3)
+  targetCPUUtilizationPercentage Int      @default(70)
+  createdAt                     DateTime @default(now())
+
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   deploys       Deploy[]
   envVars       EnvVar[]

@@ -224,9 +224,10 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
           containerPort,
           envVars: envVars.map((envVar) => ({ key: envVar.key, value: envVar.value })),
           deployId,
-          minReplicas: Number(process.env.KUBERNETES_MIN_REPLICAS ?? 1),
-          maxReplicas: Number(process.env.KUBERNETES_MAX_REPLICAS ?? 3),
-          targetCPUUtilizationPercentage: Number(process.env.KUBERNETES_CPU_TARGET ?? 70),
+          minReplicas: app?.minReplicas ?? Number(process.env.KUBERNETES_MIN_REPLICAS ?? 1),
+          maxReplicas: app?.maxReplicas ?? Number(process.env.KUBERNETES_MAX_REPLICAS ?? 3),
+          targetCPUUtilizationPercentage:
+            app?.targetCPUUtilizationPercentage ?? Number(process.env.KUBERNETES_CPU_TARGET ?? 70),
         });
 
         appUrl = k8sResult.url || "http://127.0.0.1";

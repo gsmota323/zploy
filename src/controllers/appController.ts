@@ -8,14 +8,18 @@ const prisma = new PrismaClient();
 
 export async function create(req: AuthRequest, res: Response) {
   try {
-    const { name } = req.body;
+    const { name, minReplicas, maxReplicas, targetCPUUtilizationPercentage } = req.body;
     const userId = req.userId;
 
     if (!userId) {
       return res.status(401).json({ error: 'Usuário não autenticado.' });
     }
 
-    const app = await createApp(name, String(userId));
+    const app = await createApp(name, String(userId), {
+      minReplicas,
+      maxReplicas,
+      targetCPUUtilizationPercentage,
+    });
     res.status(201).json(app);
   } catch (error: any) {
     // 1. Mostra o erro real no teu terminal (servidor)
@@ -64,7 +68,7 @@ export async function remove(req: AuthRequest, res: Response) {
 export async function startDeploy(req: Request, res: Response) {
   try {
     const { id } = req.params; // appId
-    const { repositoryUrl } = req.body;
+    const { repositoryUrl, minReplicas, maxReplicas, targetCPUUtilizationPercentage } = req.body;
 
     if (!repositoryUrl) {
       return res.status(400).json({ error: "O link do repositório é obrigatório." });
@@ -72,6 +76,24 @@ export async function startDeploy(req: Request, res: Response) {
 
     // Identificar o appId de forma segura
     const appId = Array.isArray(id) ? id[0] : id;
+
+    const app = await prisma.app.findUnique({ where: { id: appId } });
+    if (!app) {
+      return res.status(404).json({ error: "Aplicativo não encontrado." });
+    }
+
+    const nextConfig = {
+      minReplicas: Number.isFinite(Number(minReplicas)) ? Number(minReplicas) : app.minReplicas,
+      maxReplicas: Number.isFinite(Number(maxReplicas)) ? Number(maxReplicas) : app.maxReplicas,
+      targetCPUUtilizationPercentage: Number.isFinite(Number(targetCPUUtilizationPercentage))
+        ? Number(targetCPUUtilizationPercentage)
+        : app.targetCPUUtilizationPercentage,
+    };
+
+    await prisma.app.update({
+      where: { id: appId },
+      data: nextConfig,
+    });
 
     const newDeploy = await prisma.deploy.create({
       data: {
@@ -85,7 +107,8 @@ export async function startDeploy(req: Request, res: Response) {
     return res.status(202).json({
       message: "Deploy na fila!",
       deployId: newDeploy.id,
-      jobId: job.id
+      jobId: job.id,
+      autoscaling: nextConfig,
     });
   } catch (error) {
     console.error("Erro ao enviar deploy para a fila:", error);
