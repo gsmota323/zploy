@@ -1,33 +1,188 @@
 import { Response } from "express";
-import { AuthRequest } from "../middlewares/authMiddleware";
+import { PrismaClient } from "@prisma/client";
 import { execFile } from "child_process";
 import { promisify } from "util";
-import { resolveNamespace } from "../utils/kubernetes";
+import { AuthRequest } from "../middlewares/authMiddleware";
+import { buildDeploymentName, resolveNamespace } from "../utils/kubernetes";
 
+const prisma = new PrismaClient();
 const execFileAsync = promisify(execFile);
 
-export async function getPodLogs(req: AuthRequest, res: Response) {
+function normalizeTail(value: string | undefined) {
+  const parsed = Number(value ?? "200");
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 200;
+  }
+
+  return Math.min(parsed, 1000);
+}
+
+async function getPodInfo(app: { id: string; name: string; userId: string }, namespace: string) {
+  const deploymentName = buildDeploymentName(app.name, app.id);
+
   try {
-    const { appId } = req.params;
-    const namespace = resolveNamespace(req.query.namespace as string | undefined);
-
-    if (!appId) {
-      return res.status(400).json({ error: "appId é obrigatório." });
-    }
-
-    const deploymentName = `app-${appId.slice(0, 6)}`;
-
-    const { stdout } = await execFileAsync(
+    const podList = await execFileAsync(
       "kubectl",
-      ["logs", `deployment/${deploymentName}`, "-n", namespace, "--tail=200"],
+      [
+        "get",
+        "pods",
+        "-n",
+        namespace,
+        "-l",
+        `app=${deploymentName}`,
+        "-o",
+        "jsonpath={.items[0].metadata.name}",
+      ],
       {
         env: process.env,
       }
     );
 
-    return res.json({ namespace, deploymentName, logs: stdout });
+    const podName = podList.stdout.trim();
+
+    if (!podName) {
+      return {
+        deploymentName,
+        podName: null,
+        ready: false,
+        status: "not-found",
+      };
+    }
+
+    const statusOutput = await execFileAsync(
+      "kubectl",
+      ["get", "pod", podName, "-n", namespace, "-o", "jsonpath={.status.phase}"],
+      {
+        env: process.env,
+      }
+    );
+
+    return {
+      deploymentName,
+      podName,
+      ready: statusOutput.stdout.trim() === "Running",
+      status: statusOutput.stdout.trim() || "unknown",
+    };
+  } catch {
+    return {
+      deploymentName,
+      podName: null,
+      ready: false,
+      status: "not-found",
+    };
+  }
+}
+
+export async function getPodLogs(req: AuthRequest, res: Response) {
+  try {
+    const { appId } = req.params;
+    const namespace = resolveNamespace(req.query.namespace as string | undefined);
+    const userId = req.userId;
+    const tail = normalizeTail(req.query.tail as string | undefined);
+
+    if (!appId) {
+      return res.status(400).json({ error: "appId é obrigatório." });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: "Usuário não autenticado." });
+    }
+
+    const app = await prisma.app.findFirst({
+      where: {
+        id: String(appId),
+        userId,
+      },
+    });
+
+    if (!app) {
+      return res.status(404).json({ error: "App não encontrado." });
+    }
+
+    const podInfo = await getPodInfo(app, namespace);
+    const deploymentName = podInfo.deploymentName;
+
+    let podName = podInfo.podName || "";
+    let source: "pod" | "deployment" = "pod";
+    let logs = "";
+
+    if (podName) {
+      const result = await execFileAsync(
+        "kubectl",
+        ["logs", `pod/${podName}`, "-n", namespace, `--tail=${tail}`],
+        {
+          env: process.env,
+        }
+      );
+
+      logs = result.stdout;
+    } else {
+      source = "deployment";
+      const result = await execFileAsync(
+        "kubectl",
+        ["logs", `deployment/${deploymentName}`, "-n", namespace, `--tail=${tail}`],
+        {
+          env: process.env,
+        }
+      );
+
+      logs = result.stdout;
+    }
+
+    return res.json({
+      success: true,
+      namespace,
+      deploymentName,
+      podName,
+      source,
+      status: podInfo.status,
+      ready: podInfo.ready,
+      logs,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return res.status(500).json({ error: "Erro ao buscar logs do pod.", details: message });
+  }
+}
+
+export async function getPodStatus(req: AuthRequest, res: Response) {
+  try {
+    const { appId } = req.params;
+    const namespace = resolveNamespace(req.query.namespace as string | undefined);
+    const userId = req.userId;
+
+    if (!appId) {
+      return res.status(400).json({ error: "appId é obrigatório." });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: "Usuário não autenticado." });
+    }
+
+    const app = await prisma.app.findFirst({
+      where: {
+        id: String(appId),
+        userId,
+      },
+    });
+
+    if (!app) {
+      return res.status(404).json({ error: "App não encontrado." });
+    }
+
+    const podInfo = await getPodInfo(app, namespace);
+
+    return res.json({
+      success: true,
+      namespace,
+      appId: app.id,
+      deploymentName: podInfo.deploymentName,
+      podName: podInfo.podName,
+      status: podInfo.status,
+      ready: podInfo.ready,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({ error: "Erro ao consultar status do pod.", details: message });
   }
 }
