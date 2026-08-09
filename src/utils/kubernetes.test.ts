@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildDeploymentName,
   buildKubernetesManifests,
+  buildRecoveryDecision,
   resolveNamespace,
   summarizeKubernetesHealth,
 } from "./kubernetes";
@@ -61,4 +62,18 @@ test("summarizeKubernetesHealth marca o deployment como saudável quando todos o
 
   assert.equal(summary.healthy, true);
   assert.match(summary.message, /saudável|prontos/i);
+});
+
+test("buildRecoveryDecision recomenda rollback quando o deployment está em estado insalubre", () => {
+  const decision = buildRecoveryDecision({
+    healthy: false,
+    ready: false,
+    status: "CrashLoopBackOff",
+    replicas: 2,
+    availableReplicas: 0,
+    unavailableReplicas: 2,
+  });
+
+  assert.equal(decision.shouldRollback, true);
+  assert.match(decision.message, /rollback|recovery|revert/i);
 });

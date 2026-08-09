@@ -28,6 +28,12 @@ export type KubernetesHealthSummary = {
   message: string;
 };
 
+export type KubernetesRecoveryDecision = {
+  shouldRollback: boolean;
+  action: "keep" | "rollback";
+  message: string;
+};
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -97,6 +103,39 @@ export function summarizeKubernetesHealth({
     availableReplicas,
     unavailableReplicas,
     message,
+  };
+}
+
+export function buildRecoveryDecision({
+  healthy,
+  ready,
+  status,
+  replicas,
+  availableReplicas,
+  unavailableReplicas,
+}: {
+  healthy: boolean;
+  ready: boolean;
+  status: string;
+  replicas: number;
+  availableReplicas: number;
+  unavailableReplicas: number;
+}): KubernetesRecoveryDecision {
+  const shouldRollback =
+    !healthy || !ready || unavailableReplicas > 0 || (replicas > 0 && availableReplicas === 0);
+
+  if (shouldRollback) {
+    return {
+      shouldRollback: true,
+      action: "rollback",
+      message: `Rollback recomendado: deployment em estado ${status} com ${unavailableReplicas} réplicas indisponíveis.`,
+    };
+  }
+
+  return {
+    shouldRollback: false,
+    action: "keep",
+    message: "Deployment está estável; manutenção não é necessária.",
   };
 }
 

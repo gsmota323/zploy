@@ -5,6 +5,7 @@ import { authMiddleware } from "../middlewares/authMiddleware";
 const router = Router();
 
 router.get("/:appId/status", authMiddleware, getPodStatus);
+router.get("/:appId/health", authMiddleware, getPodStatus);
 router.get("/:appId/logs", authMiddleware, getPodLogs);
 
 export default router;
