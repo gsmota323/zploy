@@ -322,3 +322,17 @@ export async function deployToKubernetes({
     throw new Error(`Falha ao publicar no Kubernetes: ${message}`);
   }
 }
+
+export async function rollbackKubernetesDeployment(deploymentName: string, namespace: string): Promise<string> {
+  const resolvedNamespace = resolveNamespace(namespace);
+  
+  try {
+    const result = await execFileAsync("kubectl", ["rollout", "undo", `deployment/${deploymentName}`, "-n", resolvedNamespace], {
+      env: process.env,
+    });
+    return result.stdout.trim();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Falha ao realizar rollback no Kubernetes: ${message}`);
+  }
+}

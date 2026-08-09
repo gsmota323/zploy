@@ -7,6 +7,8 @@ import {
   buildDeploymentName,
   resolveNamespace,
   summarizeKubernetesHealth,
+  buildRecoveryDecision,
+  rollbackKubernetesDeployment,
 } from "../utils/kubernetes";
 
 const prisma = new PrismaClient();
@@ -215,6 +217,15 @@ export async function getPodStatus(req: AuthRequest, res: Response) {
       unavailableReplicas: podInfo.unavailableReplicas,
     });
 
+    const recoveryDecision = buildRecoveryDecision({
+      healthy: health.healthy,
+      ready: health.ready,
+      status: health.status,
+      replicas: health.replicas,
+      availableReplicas: health.availableReplicas,
+      unavailableReplicas: health.unavailableReplicas,
+    });
+
     return res.json({
       success: true,
       namespace,
@@ -224,9 +235,49 @@ export async function getPodStatus(req: AuthRequest, res: Response) {
       status: podInfo.status,
       ready: podInfo.ready,
       health,
+      recoveryDecision,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return res.status(500).json({ error: "Erro ao consultar status do pod.", details: message });
+  }
+}
+
+export async function rollbackDeployment(req: AuthRequest, res: Response) {
+  try {
+    const { appId } = req.params;
+    const namespace = resolveNamespace(req.query.namespace as string | undefined);
+    const userId = req.userId;
+
+    if (!appId) {
+      return res.status(400).json({ error: "appId é obrigatório." });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: "Usuário não autenticado." });
+    }
+
+    const app = await prisma.app.findFirst({
+      where: {
+        id: String(appId),
+        userId,
+      },
+    });
+
+    if (!app) {
+      return res.status(404).json({ error: "App não encontrado." });
+    }
+
+    const deploymentName = buildDeploymentName(app.name, app.id);
+    const result = await rollbackKubernetesDeployment(deploymentName, namespace);
+
+    return res.json({
+      success: true,
+      message: "Rollback disparado com sucesso no Kubernetes.",
+      details: result,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({ error: "Erro ao realizar o rollback.", details: message });
   }
 }
