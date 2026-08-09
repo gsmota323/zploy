@@ -18,6 +18,16 @@ export type KubernetesDeploymentResult = {
   deploymentName: string;
 };
 
+export type KubernetesHealthSummary = {
+  healthy: boolean;
+  ready: boolean;
+  status: string;
+  replicas: number;
+  availableReplicas: number;
+  unavailableReplicas: number;
+  message: string;
+};
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -58,6 +68,36 @@ export function resolveAutoscalingConfig({
 
 export function buildDeploymentName(appName: string, appId: string) {
   return `${slugify(appName || "app")}-${appId.slice(0, 6)}`;
+}
+
+export function summarizeKubernetesHealth({
+  ready,
+  status,
+  replicas,
+  availableReplicas,
+  unavailableReplicas,
+}: {
+  ready: boolean;
+  status: string;
+  replicas: number;
+  availableReplicas: number;
+  unavailableReplicas: number;
+}): KubernetesHealthSummary {
+  const healthy = ready && unavailableReplicas === 0 && replicas > 0;
+
+  const message = healthy
+    ? `Deployment saudável: ${availableReplicas} de ${replicas} réplicas prontas.`
+    : `Deployment em problema: ${unavailableReplicas} réplicas indisponíveis em ${replicas}.`;
+
+  return {
+    healthy,
+    ready,
+    status,
+    replicas,
+    availableReplicas,
+    unavailableReplicas,
+    message,
+  };
 }
 
 export function buildKubernetesManifests({

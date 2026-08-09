@@ -3,7 +3,11 @@ import { PrismaClient } from "@prisma/client";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { AuthRequest } from "../middlewares/authMiddleware";
-import { buildDeploymentName, resolveNamespace } from "../utils/kubernetes";
+import {
+  buildDeploymentName,
+  resolveNamespace,
+  summarizeKubernetesHealth,
+} from "../utils/kubernetes";
 
 const prisma = new PrismaClient();
 const execFileAsync = promisify(execFile);
@@ -46,6 +50,9 @@ async function getPodInfo(app: { id: string; name: string; userId: string }, nam
         podName: null,
         ready: false,
         status: "not-found",
+        replicas: 0,
+        availableReplicas: 0,
+        unavailableReplicas: 0,
       };
     }
 
@@ -57,11 +64,36 @@ async function getPodInfo(app: { id: string; name: string; userId: string }, nam
       }
     );
 
+    const deploymentStatusOutput = await execFileAsync(
+      "kubectl",
+      [
+        "get",
+        "deployment",
+        deploymentName,
+        "-n",
+        namespace,
+        "-o",
+        "jsonpath={.status.readyReplicas},{.status.availableReplicas},{.status.unavailableReplicas},{.spec.replicas}",
+      ],
+      {
+        env: process.env,
+      }
+    );
+
+    const [readyReplicas = "0", availableReplicas = "0", unavailableReplicas = "0", replicas = "0"] =
+      String(deploymentStatusOutput.stdout || "0,0,0,0")
+        .split(",")
+        .map((value) => value.trim());
+
     return {
       deploymentName,
       podName,
       ready: statusOutput.stdout.trim() === "Running",
       status: statusOutput.stdout.trim() || "unknown",
+      replicas: Number(replicas || 0),
+      availableReplicas: Number(availableReplicas || 0),
+      unavailableReplicas: Number(unavailableReplicas || 0),
+      readyReplicas: Number(readyReplicas || 0),
     };
   } catch {
     return {
@@ -69,6 +101,10 @@ async function getPodInfo(app: { id: string; name: string; userId: string }, nam
       podName: null,
       ready: false,
       status: "not-found",
+      replicas: 0,
+      availableReplicas: 0,
+      unavailableReplicas: 0,
+      readyReplicas: 0,
     };
   }
 }
@@ -171,6 +207,13 @@ export async function getPodStatus(req: AuthRequest, res: Response) {
     }
 
     const podInfo = await getPodInfo(app, namespace);
+    const health = summarizeKubernetesHealth({
+      ready: podInfo.ready,
+      status: podInfo.status,
+      replicas: podInfo.replicas,
+      availableReplicas: podInfo.availableReplicas,
+      unavailableReplicas: podInfo.unavailableReplicas,
+    });
 
     return res.json({
       success: true,
@@ -180,6 +223,7 @@ export async function getPodStatus(req: AuthRequest, res: Response) {
       podName: podInfo.podName,
       status: podInfo.status,
       ready: podInfo.ready,
+      health,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

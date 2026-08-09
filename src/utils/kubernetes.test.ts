@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildDeploymentName, buildKubernetesManifests, resolveNamespace } from "./kubernetes";
+import {
+  buildDeploymentName,
+  buildKubernetesManifests,
+  resolveNamespace,
+  summarizeKubernetesHealth,
+} from "./kubernetes";
 
 test("resolveNamespace usa o namespace configurado no ambiente", () => {
   process.env.KUBERNETES_NAMESPACE = "staging";
@@ -43,4 +48,17 @@ test("buildKubernetesManifests inclui autoscaling por CPU", () => {
   assert.match(manifest, /maxReplicas: 6/);
   assert.match(manifest, /averageUtilization: 70/);
   assert.match(manifest, /cpu: "100m"/);
+});
+
+test("summarizeKubernetesHealth marca o deployment como saudável quando todos os pods estão prontos", () => {
+  const summary = summarizeKubernetesHealth({
+    ready: true,
+    status: "Running",
+    replicas: 2,
+    availableReplicas: 2,
+    unavailableReplicas: 0,
+  });
+
+  assert.equal(summary.healthy, true);
+  assert.match(summary.message, /saudável|prontos/i);
 });
