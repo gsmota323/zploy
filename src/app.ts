@@ -1,4 +1,5 @@
 import express from "express";
+import path from "path";
 const cors = require("cors");
 import userRoutes from "./routes/userRoutes";
 import authRoutes from "./routes/authRoutes"; 
@@ -12,12 +13,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Serve o frontend estático
+app.use("/frontend", express.static(path.join(process.cwd(), "frontend")));
+
 app.use("/users", userRoutes);
 app.use("/auth", authRoutes); 
 app.use("/apps", appRoutes);
 
 app.get("/", (req, res) => {
-  res.send("API rodando 🚀");
+  res.sendFile(path.join(process.cwd(), "frontend", "index.html"));
 });
 
 app.use("/deploys", deployRoutes);
