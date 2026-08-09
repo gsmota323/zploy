@@ -439,6 +439,23 @@
                 <pre id="console">Aguardando...</pre>
             </div>
 
+            <div class="card deploy-card full">
+                <div class="section-title">
+                    <h2>⚙️ Status Kubernetes & Rollback</h2>
+                </div>
+                <p class="hint">Verifique a saúde do seu App no cluster e reverta para a versão anterior se estiver quebrado.</p>
+                
+                <div class="field">
+                    <label for="statusAppId">ID do App</label>
+                    <input type="text" id="statusAppId" placeholder="ID do App (preenchido automaticamente ao clicar em Usar ID)">
+                </div>
+
+                <div class="actions">
+                    <button class="btn-info" onclick="verStatus()">Verificar Status</button>
+                    <button class="btn-del" id="btnRollback" style="display: none;" onclick="fazerRollback()">⚠️ Reverter para Versão Anterior (Rollback)</button>
+                </div>
+            </div>
+
             <div class="card terminal-card full">
                 <div class="section-title">
                     <h2>🖥️ Terminal de Logs do Container</h2>
@@ -544,7 +561,7 @@
                         <span>${escapeHtml(app.name)} <small>(${escapeHtml(app.id.substring(0,8))}...)</small></span>
                         <div class="app-actions">
                             <button class="btn-small" 
-                                onclick="document.getElementById('deployAppId').value='${app.id}'; document.getElementById('logAppId').value='${app.id}';">
+                                onclick="document.getElementById('deployAppId').value='${app.id}'; document.getElementById('logAppId').value='${app.id}'; document.getElementById('statusAppId').value='${app.id}';">
                                 Usar ID
                             </button>
                             <button class="btn-small btn-del" onclick="deletarApp('${app.id}')">Del</button>
@@ -606,7 +623,7 @@
             terminal.innerText = ">_ Conectando ao daemon do Docker...\n>_ Buscando logs do container...\n";
 
             try {
-                const res = await fetch(`${API_URL}/apps/${appId}/logs`, {
+                const res = await fetch(`${API_URL}/kubernetes/${appId}/logs`, {
                     method: 'GET',
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
                 });
@@ -622,6 +639,45 @@
             } catch (err) {
                 terminal.innerText += "\n>_ FALHA CRÍTICA: Sem comunicação com a API Backend.";
             }
+        }
+
+        // ==========================================
+        // ROTA DE STATUS E ROLLBACK DO KUBERNETES
+        // ==========================================
+        async function verStatus() {
+            const appId = document.getElementById('statusAppId').value;
+            if (!appId) { log({ error: "Preencha o ID do App." }); return; }
+            
+            try {
+                log("Buscando status no Kubernetes...");
+                const res = await fetch(`${API_URL}/kubernetes/${appId}/status`, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
+                const data = await res.json();
+                log(data);
+
+                const btnRollback = document.getElementById('btnRollback');
+                // Se a API indicar que deve fazer rollback, exibimos o botão
+                if (data.recoveryDecision && data.recoveryDecision.shouldRollback) {
+                    btnRollback.style.display = 'inline-flex';
+                } else {
+                    btnRollback.style.display = 'none';
+                }
+            } catch(e) { log("Erro ao ver status do Kubernetes."); }
+        }
+
+        async function fazerRollback() {
+            const appId = document.getElementById('statusAppId').value;
+            if (!appId) return;
+            try {
+                log("Disparando comando de rollback...");
+                const res = await fetch(`${API_URL}/kubernetes/${appId}/rollback`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
+                const data = await res.json();
+                log(data);
+                
+                // Oculta o botão depois que engatilhou com sucesso
+                if(data.success) {
+                    document.getElementById('btnRollback').style.display = 'none';
+                }
+            } catch(e) { log("Erro no rollback."); }
         }
     </script>
 </body>

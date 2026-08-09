@@ -233,6 +233,26 @@ spec:
         target:
           type: Utilization
           averageUtilization: ${autoscaling.targetCPUUtilizationPercentage}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ${deploymentName}
+  namespace: ${namespace}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - host: ${slugify(appName)}.zploy.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ${deploymentName}
+                port:
+                  number: 80
 `;
 }
 
@@ -300,6 +320,8 @@ export async function deployToKubernetes({
       }
     );
 
+    // Continuamos pegando o NodePort apenas para histórico/debug se necessário,
+    // mas a URL oficial da aplicação agora é gerenciada pelo Ingress!
     const nodePortOutput = await execFileAsync(
       "kubectl",
       ["get", "service", deploymentName, "-n", resolvedNamespace, "-o", "jsonpath={.spec.ports[0].nodePort}"],
@@ -308,8 +330,7 @@ export async function deployToKubernetes({
       }
     );
 
-    const nodePort = Number(nodePortOutput.stdout.trim());
-    const url = Number.isFinite(nodePort) ? `http://127.0.0.1:${nodePort}` : undefined;
+    const url = `http://${slugify(appName)}.zploy.localhost`;
 
     return {
       url,
