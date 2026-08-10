@@ -27,7 +27,10 @@ export async function getUserApps(userId: string) {
   // Lista apenas os apps que pertencem ao usuário logado
   return await prisma.app.findMany({
     where: { userId },
-    orderBy: { createdAt: 'desc' } // Traz os mais recentes primeiro
+    orderBy: { createdAt: 'desc' },
+    include: {
+      deploys: { orderBy: { createdAt: 'desc' }, take: 10 },
+    },
   });
 }
 
