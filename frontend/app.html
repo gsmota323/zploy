@@ -7,42 +7,70 @@
   <link rel="stylesheet" href="css/main.css">
   <style>
     .page-layout {
-      display: grid;
-      grid-template-columns: 220px 1fr;
+      display: block;
       min-height: 100vh;
     }
 
-    .sidebar {
-      position: sticky; top: 0; height: 100vh;
-      background: var(--surface-solid);
-      border-right: 1px solid var(--border);
-      display: flex; flex-direction: column;
-      padding: 24px 16px; gap: 8px; overflow-y: auto;
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 28px;
+      background: rgba(7, 7, 8, 0.88);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
     }
 
-    .sidebar-logo {
+    .topbar-left {
       display: flex; align-items: center; gap: 10px;
-      font-size: 1.15rem; font-weight: 800; letter-spacing: -0.04em;
-      padding: 8px 12px; margin-bottom: 16px;
+      font-size: 1rem; font-weight: 800; letter-spacing: -0.02em;
     }
-    .sidebar-logo .logo-icon { width: 28px; height: 28px; font-size: 0.9rem; }
+    .topbar-left .logo-icon { width: 28px; height: 28px; font-size: 0.9rem; }
 
-    .sidebar-link {
+    .back-dashboard-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all var(--transition);
+      background: rgba(255,255,255,0.01);
+    }
+
+    .back-dashboard-btn:hover {
+      color: var(--text);
+      background: var(--surface-hover);
+      border-color: rgba(255,255,255,0.16);
+    }
+
+    .topbar-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topbar-link {
       display: flex; align-items: center; gap: 10px;
       padding: 9px 12px; border-radius: var(--radius-sm);
       font-size: 0.9rem; font-weight: 500; color: var(--text-secondary);
       cursor: pointer; transition: all var(--transition); text-decoration: none;
     }
-    .sidebar-link:hover { background: var(--surface-hover); color: var(--text); }
-    .sidebar-bottom {
-      margin-top: auto; border-top: 1px solid var(--border);
-      padding-top: 16px; display: flex; flex-direction: column; gap: 4px;
-    }
+    .topbar-link:hover,
+    .topbar-link.active { background: var(--surface-hover); color: var(--text); }
 
     .main { overflow-y: auto; }
 
     .page-header {
-      padding: 40px 40px 0;
+      padding: 28px 28px 0;
       margin-bottom: 0;
       border-bottom: 1px solid var(--border);
     }
@@ -56,7 +84,7 @@
 
     .app-big-icon {
       width: 52px; height: 52px;
-      border-radius: 12px;
+      border-radius: var(--radius-sm);
       background: linear-gradient(135deg, var(--primary), var(--accent));
       display: flex; align-items: center; justify-content: center;
       font-size: 1.3rem; font-weight: 800; color: white;
@@ -69,12 +97,12 @@
     .app-url-chip {
       display: inline-flex; align-items: center; gap: 6px;
       font-size: 0.82rem; color: var(--primary);
-      background: rgba(124,92,252,0.1); border: 1px solid rgba(124,92,252,0.2);
+      background: rgba(124,92,252,0.14); border: 1px solid rgba(124,92,252,0.3);
       padding: 4px 10px; border-radius: 999px; margin-top: 6px;
       cursor: pointer;
     }
 
-    .page-content { padding: 32px 40px 60px; }
+    .page-content { padding: 24px 28px 48px; }
 
     /* TABS */
     .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 32px; }
@@ -122,7 +150,7 @@
     /* LOGS TERMINAL */
     .terminal-wrapper {
       background: var(--terminal-bg);
-      border: 1px solid rgba(0,245,122,0.15);
+      border: 1px solid rgba(255,255,255,0.16);
       border-radius: var(--radius-lg);
       overflow: hidden;
     }
@@ -160,7 +188,7 @@
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius-sm); padding: 10px 16px;
     }
-    .env-key { font-size: 0.88rem; font-weight: 700; color: var(--accent); min-width: 120px; }
+    .env-key { font-size: 0.88rem; font-weight: 700; color: #cdbfff; min-width: 120px; }
     .env-val { font-size: 0.88rem; color: var(--text-secondary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     .danger-zone {
@@ -192,21 +220,16 @@
 <body>
 
   <div class="page-layout">
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <a href="index.html" class="sidebar-logo">
-        <span class="logo-icon">⚡</span>
-        Zploy
+    <header class="topbar">
+      <a href="dashboard.html" class="back-dashboard-btn" aria-label="Voltar para Dashboard">
+        <span aria-hidden="true">←</span>
+        Voltar para Dashboard
       </a>
-      <a class="sidebar-link" href="dashboard.html">
-        <span>🏠</span> Dashboard
-      </a>
-      <div class="sidebar-bottom">
-        <div class="sidebar-link" onclick="Auth.logout()">
-          <span>🚪</span> Sair
-        </div>
-      </div>
-    </aside>
+      <nav class="topbar-nav">
+        <a class="topbar-link active" href="#">App</a>
+        <button class="btn btn-ghost btn-sm" onclick="Auth.logout()">Sair</button>
+      </nav>
+    </header>
 
     <!-- MAIN -->
     <main class="main">
@@ -263,10 +286,10 @@
               <div class="divider"></div>
               <div class="flex items-center justify-between flex-wrap gap-12">
                 <div>
-                  <div style="font-weight:700;color:var(--danger)">⚠️ Rollback recomendado</div>
+                  <div style="font-weight:700;color:var(--danger)">Rollback recomendado</div>
                   <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px">O sistema detectou instabilidade no deployment atual.</div>
                 </div>
-                <button class="btn btn-danger" onclick="doRollback()">↩ Reverter para versão anterior</button>
+                <button class="btn btn-danger" onclick="doRollback()">Reverter para versão anterior</button>
               </div>
             </div>
           </div>
@@ -283,7 +306,7 @@
             </div>
             <div id="deploy-msg" class="success-msg" style="margin-bottom:12px"></div>
             <div id="deploy-error" class="error-msg" style="margin-bottom:12px"></div>
-            <button class="btn btn-primary" id="btn-deploy" onclick="doDeploy()">🚀 Disparar Deploy</button>
+            <button class="btn btn-primary" id="btn-deploy" onclick="doDeploy()">Disparar Deploy</button>
           </div>
 
           <div>
@@ -341,9 +364,9 @@
           <div class="divider"></div>
 
           <div class="danger-zone">
-            <div class="danger-title">⚠️ Zona de Perigo</div>
+            <div class="danger-title">Zona de Perigo</div>
             <p class="danger-desc">Ao deletar o app, todos os deploys, variáveis de ambiente e recursos do Kubernetes associados serão removidos permanentemente.</p>
-            <button class="btn btn-danger" onclick="deleteApp()">🗑 Deletar este App</button>
+            <button class="btn btn-danger" onclick="deleteApp()">Deletar este App</button>
           </div>
         </div>
 
@@ -353,12 +376,28 @@
 
   <script src="js/api.js"></script>
   <script>
-    requireAuth();
+    async function bootstrap() {
+      const allowed = await requireAuth();
+      if (!allowed) return;
+      loadApp();
+    }
 
     const appId = getAppIdFromUrl();
     if (!appId) window.location.href = 'dashboard.html';
 
     let currentApp = null;
+
+    function hasRepoConfigured() {
+      return Boolean(currentApp?.repositoryUrl && String(currentApp.repositoryUrl).trim());
+    }
+
+    function hasAnyDeploy() {
+      return Array.isArray(currentApp?.deploys) && currentApp.deploys.length > 0;
+    }
+
+    function hasDeploymentContent() {
+      return hasRepoConfigured() || hasAnyDeploy() || Boolean(currentApp?.url);
+    }
 
     async function loadApp() {
       const { ok, data } = await Apps.list();
@@ -376,13 +415,18 @@
       const urlChip = document.getElementById('app-url-chip');
       if (currentApp.url) {
         urlChip.style.display = '';
-        urlChip.innerHTML = `🌐 ${escHtml(currentApp.url)}`;
+        urlChip.innerHTML = `URL: ${escHtml(currentApp.url)}`;
         urlChip.onclick = () => window.open(currentApp.url, '_blank');
       }
 
       document.getElementById('ov-status').innerHTML = statusBadge(currentApp.status);
       document.getElementById('ov-url').textContent = currentApp.url || 'Sem deploy';
       document.getElementById('repo-url').value = currentApp.repositoryUrl || '';
+
+      if (!hasDeploymentContent()) {
+        document.getElementById('k8s-status-body').textContent = 'Sem conteúdo de deploy ainda. Configure o repositório e dispare o primeiro deploy.';
+        document.getElementById('terminal').textContent = '> Sem conteúdo de logs ainda. Faça o primeiro deploy para gerar logs.';
+      }
 
       loadHistory();
       loadEnvs();
@@ -399,13 +443,20 @@
     async function loadK8sStatus() {
       const body = document.getElementById('k8s-status-body');
       const rollbackArea = document.getElementById('k8s-rollback-area');
+
+      if (!hasDeploymentContent()) {
+        body.textContent = 'Sem conteúdo de deploy ainda. Configure o repositório e dispare o primeiro deploy.';
+        rollbackArea.style.display = 'none';
+        return;
+      }
+
       body.textContent = 'Consultando cluster Kubernetes...';
       rollbackArea.style.display = 'none';
 
       const { ok, data } = await Kubernetes.status(appId);
 
       if (!ok || !data.success) {
-        body.textContent = data?.error || 'Kubernetes indisponível ou app sem deployment.';
+        body.textContent = 'Sem conteúdo de status disponível no momento.';
         return;
       }
 
@@ -414,7 +465,7 @@
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
           <div><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">STATUS</div><strong>${escHtml(data.status)}</strong></div>
           <div><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">RÉPLICAS</div><strong>${h.availableReplicas} / ${h.replicas}</strong></div>
-          <div><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">SAÚDE</div><strong style="color:${h.healthy ? 'var(--success)' : 'var(--danger)'}">${h.healthy ? '✔ Saudável' : '✕ Problema'}</strong></div>
+          <div><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">SAUDE</div><strong style="color:${h.healthy ? 'var(--success)' : 'var(--danger)'}">${h.healthy ? 'Saudavel' : 'Problema'}</strong></div>
         </div>
         <div style="margin-top:14px;font-size:0.85rem;color:var(--text-secondary)">${escHtml(h.message)}</div>
       `;
@@ -427,12 +478,21 @@
     }
 
     async function doRollback() {
+      const body = document.getElementById('k8s-status-body');
+
+      if (!hasAnyDeploy()) {
+        body.textContent = 'Ainda não há deploy para fazer rollback.';
+        return;
+      }
+
       if (!confirm('Tem certeza? O deploy atual será revertido para a versão anterior.')) return;
       const { ok, data } = await Kubernetes.rollback(appId);
-      alert(ok ? '✔ Rollback iniciado com sucesso!' : `Erro: ${data?.error}`);
       if (ok) {
+        body.textContent = 'Rollback iniciado com sucesso. Atualizando status...';
         document.getElementById('k8s-rollback-area').style.display = 'none';
         loadK8sStatus();
+      } else {
+        body.textContent = data?.error || 'Não foi possível executar rollback no momento.';
       }
     }
 
@@ -456,7 +516,7 @@
       const { ok, data } = await Apps.deploy(appId, repoUrl);
 
       if (ok) {
-        msgEl.textContent = '✔ Deploy enfileirado! Acompanhe os logs em breve.';
+        msgEl.textContent = 'Deploy enfileirado. Acompanhe os logs em breve.';
         msgEl.classList.add('visible');
         setTimeout(() => { switchTab('logs', document.querySelector('.tab:nth-child(3)')); }, 1500);
       } else {
@@ -464,7 +524,7 @@
         errEl.classList.add('visible');
       }
 
-      btn.innerHTML = '🚀 Disparar Deploy';
+      btn.innerHTML = 'Disparar Deploy';
       btn.disabled = false;
     }
 
@@ -488,13 +548,19 @@
 
     async function loadLogs() {
       const terminal = document.getElementById('terminal');
+
+      if (!hasDeploymentContent()) {
+        terminal.textContent = '> Sem conteúdo de logs ainda. Faça o primeiro deploy para gerar logs.';
+        return;
+      }
+
       terminal.textContent = '> Buscando logs do Kubernetes...\n';
       const { ok, data } = await Kubernetes.logs(appId);
       if (ok && data.logs) {
         terminal.textContent = data.logs || '> Container sem logs disponíveis.';
         terminal.scrollTop = terminal.scrollHeight;
       } else {
-        terminal.textContent = `> ${data?.error || 'Erro ao buscar logs. Kubernetes pode estar indisponível.'}`;
+        terminal.textContent = '> Sem conteúdo de logs disponível no momento.';
       }
     }
 
@@ -544,7 +610,7 @@
       return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
-    loadApp();
+    bootstrap();
   </script>
 </body>
 </html>

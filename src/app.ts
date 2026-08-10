@@ -15,11 +15,16 @@ const prisma = new PrismaClient();
 
 const app = express();
 
+function isAuthEnabled() {
+  return process.env.AUTH_ENABLED !== "false";
+}
+
 app.use(cors());
 app.use(express.json());
 
 // Serve o frontend estático
 app.use("/frontend", express.static(path.join(process.cwd(), "frontend")));
+app.use(express.static(path.join(process.cwd(), "frontend")));
 
 app.use("/users", userRoutes);
 app.use("/auth", authRoutes); 
@@ -27,6 +32,24 @@ app.use("/apps", appRoutes);
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(process.cwd(), "frontend", "index.html"));
+});
+
+app.get(["/login", "/login.html"], (req, res) => {
+  res.sendFile(path.join(process.cwd(), "frontend", "login.html"));
+});
+
+app.get(["/dashboard", "/dashboard.html"], (req, res) => {
+  res.sendFile(path.join(process.cwd(), "frontend", "dashboard.html"));
+});
+
+app.get(["/app", "/app.html"], (req, res) => {
+  res.sendFile(path.join(process.cwd(), "frontend", "app.html"));
+});
+
+app.get("/config/public", (req, res) => {
+  res.json({
+    authEnabled: isAuthEnabled(),
+  });
 });
 
 app.post("/webhooks/github", async (req, res) => {

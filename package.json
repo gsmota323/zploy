@@ -7,6 +7,11 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "worker": "ts-node-dev --respawn --transpile-only src/workers/deployWorker.ts",
+    "start": "node scripts/start.js",
+    "start:k8s": "node scripts/start-k8s.js",
+    "demo:up": "docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build -d",
+    "demo:down": "docker compose -f docker-compose.yml -f docker-compose.demo.yml stop",
+    "demo:clean": "docker compose -f docker-compose.yml -f docker-compose.demo.yml down",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
   },

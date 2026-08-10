@@ -1,4 +1,4 @@
 {
     "prisma.pinToPrisma6": true,
-    "livePreview.defaultPreviewPath": "/src/index.html"
+    "livePreview.defaultPreviewPath": "/frontend/index.html"
 }

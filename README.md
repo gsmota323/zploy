@@ -32,14 +32,12 @@ Zploy é uma plataforma de deploy local/protótipo inspirada em um PaaS, constru
 - src/queues/deployQueue.ts: fila de deploys
 - src/utils: utilitários de Docker, Kubernetes e webhook
 - prisma/: schema e migrations do banco
-- src/index.html: painel web simples
+- frontend/: painel web atual (index, login, dashboard e app)
 
 ## Requisitos
 
 - Node.js 18+
 - Docker instalado e rodando
-- PostgreSQL rodando localmente
-- Redis rodando localmente
 - Kubernetes opcional para deploys no cluster
 
 ## Variáveis de ambiente
@@ -50,6 +48,35 @@ Crie um arquivo .env com algo semelhante:
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/tcc_db"
 JWT_SECRET="zploy-secret"
 GITHUB_WEBHOOK_SECRET=""
+AUTH_ENABLED="true"
+REQUIRE_KUBERNETES="false"
+```
+
+`AUTH_ENABLED` controla o comportamento da autenticação:
+
+- `AUTH_ENABLED=true`: modo plataforma (login e registro ativos)
+- `AUTH_ENABLED=false`: modo estudo (sem login; dashboard direto com usuário local automático)
+
+`REQUIRE_KUBERNETES` controla o fallback do worker:
+
+- `REQUIRE_KUBERNETES=true`: não permite fallback para Docker local (deploy falha se Kubernetes estiver indisponível)
+- `REQUIRE_KUBERNETES=false`: fallback para Docker local habilitado
+
+Perfis prontos no repositório:
+
+- `.env.platform`: configuração para modo plataforma
+- `.env.study`: configuração para modo estudo
+
+Para alternar rapidamente no Windows (PowerShell):
+
+```powershell
+Copy-Item .env.study .env -Force
+```
+
+ou
+
+```powershell
+Copy-Item .env.platform .env -Force
 ```
 
 ## Instalação
@@ -62,22 +89,80 @@ npx prisma migrate dev
 
 ## Execução
 
-Inicie a API:
+A forma mais simples de rodar o projeto agora é com um único comando:
 
 ```bash
-npm run dev
+npm run start
 ```
 
-Inicie o worker de deploy:
+Esse comando irá:
 
-```bash
-npm run worker
-```
+- subir o PostgreSQL e o Redis com Docker Compose
+- iniciar a API
+- iniciar o worker de deploy
 
-Abra o painel em:
+Depois, abra o painel em:
 
 ```bash
 http://localhost:3000/
+```
+
+Se quiser rodar os processos separadamente, ainda é possível usar:
+
+```bash
+npm run dev
+npm run worker
+```
+
+### Modo Kubernetes completo (sem fallback)
+
+Para subir o Minikube automaticamente e iniciar a plataforma exigindo Kubernetes:
+
+```bash
+npm run start:k8s
+```
+
+Esse comando:
+
+- roda `minikube start`
+- habilita addons `ingress` e `metrics-server`
+- inicia o Zploy com `REQUIRE_KUBERNETES=true`
+
+### Modos de uso
+
+- Modo plataforma: mantenha `AUTH_ENABLED=true`
+- Modo estudo: defina `AUTH_ENABLED=false`
+
+### Modo demo (tudo em container)
+
+Para rodar API, worker, PostgreSQL e Redis em containers:
+
+```bash
+npm run demo:up
+```
+
+Para parar os containers do modo demo (sem remover):
+
+```bash
+npm run demo:down
+```
+
+Para remover containers e rede do modo demo:
+
+```bash
+npm run demo:clean
+```
+
+No modo demo, o backend fica disponível em:
+
+```bash
+http://localhost:3001/
+```
+
+Se quiser usar outra porta no host:
+
+```bash
+APP_PORT=3005 npm run demo:up
 ```
 
 ## Como usar

@@ -10,9 +10,10 @@ async function main() {
   // O "upsert" tenta criar. Se o email já existir, ele não faz nada.
   const user = await prisma.user.upsert({
     where: { email: 'admin@tcc.com' },
-    update: {},
+    update: { username: 'admin' },
     create: {
       email: 'admin@tcc.com',
+      username: 'admin',
       password: hashedPassword,
     },
   });

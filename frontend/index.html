@@ -20,9 +20,9 @@
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124,92,252,0.25) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 40% at 100% 50%, rgba(0,212,255,0.12) 0%, transparent 50%),
-        radial-gradient(ellipse 50% 40% at 0% 80%, rgba(124,92,252,0.10) 0%, transparent 50%);
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124,92,252,0.18) 0%, transparent 62%),
+        radial-gradient(ellipse 50% 40% at 100% 50%, rgba(161,132,255,0.09) 0%, transparent 52%),
+        radial-gradient(ellipse 50% 40% at 0% 80%, rgba(124,92,252,0.06) 0%, transparent 52%);
       pointer-events: none;
     }
 
@@ -58,8 +58,8 @@
       border-radius: 999px;
       font-size: 0.82rem;
       font-weight: 600;
-      color: var(--primary);
-      background: rgba(124,92,252,0.08);
+      color: #cdbfff;
+      background: rgba(124,92,252,0.1);
       backdrop-filter: blur(10px);
       animation: fadeInUp 0.5s ease forwards;
     }
@@ -95,10 +95,10 @@
 
     .terminal-mock {
       background: #05090e;
-      border: 1px solid rgba(0,245,122,0.15);
+      border: 1px solid rgba(255,255,255,0.16);
       border-radius: var(--radius-lg);
       overflow: hidden;
-      box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 60px rgba(0,245,122,0.04);
+      box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 rgba(0,0,0,0);
     }
 
     .terminal-mock-header {
@@ -119,10 +119,10 @@
 
     .t-dim { color: #3a5040; }
     .t-cmd { color: #fff; }
-    .t-green { color: #00f57a; }
-    .t-cyan { color: #00d4ff; }
+    .t-green { color: #d6d6d6; }
+    .t-cyan { color: #f2f2f2; }
     .t-yellow { color: #ffb03a; }
-    .t-purple { color: #b48eff; }
+    .t-purple { color: #b5b5b5; }
 
     /* ===== STATS STRIP ===== */
     .stats-strip {
@@ -254,7 +254,7 @@
     /* ===== HOW IT WORKS ===== */
     .how-section {
       padding: 80px 20px;
-      background: rgba(124,92,252,0.03);
+      background: rgba(124,92,252,0.05);
       border-top: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
     }
@@ -274,15 +274,15 @@
       width: 48px;
       height: 48px;
       border-radius: 50%;
-      border: 2px solid var(--primary);
+      border: 2px solid rgba(124,92,252,0.5);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 1.1rem;
       font-weight: 800;
-      color: var(--primary);
+      color: #d6c9ff;
       margin: 0 auto 20px;
-      background: rgba(124,92,252,0.1);
+      background: rgba(124,92,252,0.12);
     }
 
     .step-title {
@@ -304,8 +304,8 @@
     }
 
     .cta-box {
-      background: linear-gradient(135deg, rgba(124,92,252,0.15), rgba(0,212,255,0.08));
-      border: 1px solid rgba(124,92,252,0.3);
+      background: linear-gradient(135deg, rgba(124,92,252,0.16), rgba(124,92,252,0.05));
+      border: 1px solid rgba(124,92,252,0.32);
       border-radius: 28px;
       padding: 72px 40px;
       max-width: 700px;
@@ -367,7 +367,7 @@
   <nav class="navbar">
     <div class="navbar-inner">
       <a href="index.html" class="logo">
-        <span class="logo-icon">⚡</span>
+        <span class="logo-icon">Z</span>
         Zploy
       </a>
       <div class="nav-links hide-mobile">
@@ -375,8 +375,9 @@
         <a href="#como-funciona" class="nav-link">Como funciona</a>
       </div>
       <div class="flex gap-8">
-        <a href="login.html" class="btn btn-ghost btn-sm">Entrar</a>
-        <a href="login.html?tab=register" class="btn btn-primary btn-sm">Começar grátis</a>
+        <a href="login.html" class="btn btn-ghost btn-sm" data-auth-action="login">Entrar</a>
+        <a href="login.html?tab=register" class="btn btn-primary btn-sm" data-auth-action="register">Começar gratis</a>
+        <a href="dashboard.html" class="btn btn-primary btn-sm" data-auth-action="panel" style="display:none;">Ir para o Painel</a>
       </div>
     </div>
   </nav>
@@ -388,7 +389,7 @@
 
     <div class="hero-content container">
       <div class="hero-eyebrow">
-        ✦ Deploy automático com Kubernetes
+        Deploy automatico com Kubernetes
       </div>
 
       <h1 class="hero-title">
@@ -401,10 +402,10 @@
       </p>
 
       <div class="hero-actions">
-        <a href="login.html?tab=register" class="btn btn-primary btn-lg">
-          🚀 Começar agora, é grátis
+        <a href="login.html?tab=register" class="btn btn-primary btn-lg" data-auth-action="register">
+          Comecar agora, e gratis
         </a>
-        <a href="dashboard.html" class="btn btn-secondary btn-lg">
+        <a href="dashboard.html" class="btn btn-secondary btn-lg" data-auth-action="panel">
           Ver o painel
         </a>
       </div>
@@ -427,8 +428,8 @@
             <div><span class="t-dim">›</span> <span class="t-cyan">Construindo imagem Docker: </span><span class="t-cmd">zploy-app-a3f2c1</span></div>
             <div><span class="t-dim">›</span> <span class="t-cyan">Aplicando manifests no Kubernetes...</span></div>
             <div><span class="t-dim">›</span> <span class="t-cyan">Aguardando deployment ficar pronto...</span></div>
-            <div><span class="t-green">✔ Deploy concluído em 47s!</span></div>
-            <div><span class="t-green">🌐 Sua aplicação está em: </span><span class="t-cyan">http://minha-api.zploy.localhost</span></div>
+            <div><span class="t-green">Deploy concluido em 47s.</span></div>
+            <div><span class="t-green">Sua aplicacao esta em: </span><span class="t-cyan">http://minha-api.zploy.localhost</span></div>
           </div>
         </div>
       </div>
@@ -468,32 +469,32 @@
 
       <div class="grid-3" style="gap:20px">
         <div class="feature-card">
-          <div class="feature-icon icon-purple">⚡</div>
+          <div class="feature-icon icon-purple">D</div>
           <div class="feature-title">Deploy com Git Clone</div>
           <p class="feature-desc">Cole o link do seu repositório público e nós cuidamos do resto. Clone, build e deploy automático.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon icon-cyan">🐳</div>
+          <div class="feature-icon icon-cyan">C</div>
           <div class="feature-title">Docker Automático</div>
           <p class="feature-desc">Detectamos a tecnologia (Node.js ou Python) e geramos o Dockerfile ideal sem você precisar escrever uma linha.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon icon-green">☸️</div>
+          <div class="feature-icon icon-green">K</div>
           <div class="feature-title">Kubernetes Integrado</div>
           <p class="feature-desc">Cada deploy cria automaticamente um Deployment, Service e Ingress no cluster Kubernetes configurado.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon icon-orange">📈</div>
+          <div class="feature-icon icon-orange">A</div>
           <div class="feature-title">Autoscaling por CPU</div>
           <p class="feature-desc">Configure min/max réplicas e alvo de CPU. O HPA cuida de escalar o seu app conforme a demanda.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon icon-pink">↩️</div>
+          <div class="feature-icon icon-pink">R</div>
           <div class="feature-title">Rollback com 1 Clique</div>
           <p class="feature-desc">Deploy quebrou? Revertemos para a versão anterior imediatamente via kubectl rollout undo.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon icon-blue">🔐</div>
+          <div class="feature-icon icon-blue">S</div>
           <div class="feature-title">Variáveis de Ambiente</div>
           <p class="feature-desc">Gerencie ENV vars de forma segura pela interface. Elas são injetadas no container automaticamente.</p>
         </div>
@@ -540,8 +541,8 @@
       <div class="cta-box">
         <h2 class="cta-title">Pronto para fazer o <br><span class="text-gradient">primeiro deploy?</span></h2>
         <p class="cta-subtitle">Crie sua conta, configure seu app e veja ele rodar no Kubernetes em minutos.</p>
-        <a href="login.html?tab=register" class="btn btn-primary btn-lg">
-          🚀 Criar conta grátis
+        <a href="login.html?tab=register" class="btn btn-primary btn-lg" data-auth-action="register">
+          Criar conta gratis
         </a>
       </div>
     </div>
@@ -554,14 +555,33 @@
 
   <script src="js/api.js"></script>
   <script>
-    // Se já estiver logado, manda pro dashboard
-    if (isLoggedIn()) {
-      const ctaBtn = document.querySelector('.hero-actions a[href="login.html?tab=register"]');
-      if (ctaBtn) {
-        ctaBtn.href = 'dashboard.html';
-        ctaBtn.textContent = '🚀 Ir para o Painel';
+    async function bootstrapLanding() {
+      const mode = await getAuthMode();
+      const loginButtons = document.querySelectorAll('a[data-auth-action="login"], a[data-auth-action="register"]');
+      const panelButtons = document.querySelectorAll('a[data-auth-action="panel"]');
+      const panelTopButton = document.querySelector('a[data-auth-action="panel"][class*="btn-sm"]');
+
+      if (!mode.authEnabled) {
+        loginButtons.forEach((button) => {
+          button.href = 'dashboard.html';
+        });
+      }
+
+      if (isLoggedIn()) {
+        loginButtons.forEach((button) => {
+          button.style.display = 'none';
+        });
+        panelButtons.forEach((button) => {
+          button.style.display = '';
+        });
+
+        if (panelTopButton) {
+          panelTopButton.textContent = 'Painel';
+        }
       }
     }
+
+    bootstrapLanding();
   </script>
 </body>
 </html>

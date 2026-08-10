@@ -201,6 +201,7 @@ export const worker = new Worker(
       let appUrl = "";
       let deploymentSucceeded = false;
       let hostPort = 0;
+      const requireKubernetes = process.env.REQUIRE_KUBERNETES === "true";
 
       try {
         const k8sResult = await deployToKubernetes({
@@ -226,6 +227,11 @@ export const worker = new Worker(
           message: `Aplicação publicada no Kubernetes: ${appUrl}`,
         });
       } catch (k8sError) {
+        if (requireKubernetes) {
+          const reason = k8sError instanceof Error ? k8sError.message : String(k8sError);
+          throw new Error(`Kubernetes obrigatório, mas indisponível: ${reason}`);
+        }
+
         console.warn("[Worker] Kubernetes indisponível, usando fallback com Docker:", k8sError);
 
         const envArgs = envVars.flatMap((envVar) => [

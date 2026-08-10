@@ -1,4 +1,6 @@
-const API_URL = 'http://localhost:3000';
+const API_URL = window.location.origin;
+const AUTH_MODE_KEY = 'zploy_auth_enabled';
+let authModeCache = null;
 
 function getToken() {
   return localStorage.getItem('zploy_token');
@@ -12,36 +14,102 @@ function clearSession() {
   localStorage.removeItem('zploy_token');
 }
 
+function isAuthEnabledCached() {
+  const cached = localStorage.getItem(AUTH_MODE_KEY);
+  if (cached === 'false') return false;
+  if (cached === 'true') return true;
+  return null;
+}
+
+async function getAuthMode() {
+  if (authModeCache) return authModeCache;
+
+  try {
+    const res = await fetch(`${API_URL}/config/public`);
+    const data = await res.json();
+    authModeCache = {
+      authEnabled: data?.authEnabled !== false,
+    };
+  } catch {
+    authModeCache = {
+      authEnabled: true,
+    };
+  }
+
+  localStorage.setItem(AUTH_MODE_KEY, String(authModeCache.authEnabled));
+
+  if (!authModeCache.authEnabled && !getToken()) {
+    setToken('study-mode');
+  }
+
+  return authModeCache;
+}
+
 function isLoggedIn() {
+  if (isAuthEnabledCached() === false) {
+    return true;
+  }
+
   return !!getToken();
 }
 
-function requireAuth() {
-  if (!isLoggedIn()) {
-    window.location.href = '/frontend/login.html';
+async function requireAuth() {
+  const mode = await getAuthMode();
+
+  if (!mode.authEnabled) {
+    return true;
   }
+
+  if (!isLoggedIn()) {
+    window.location.href = 'login.html';
+    return false;
+  }
+
+  return true;
 }
 
 function authHeaders(extra = {}) {
+  const token = getToken();
+
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${getToken()}`,
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...extra,
   };
 }
 
-async function api(method, endpoint, body) {
-  const res = await fetch(`${API_URL}${endpoint}`, {
-    method,
-    headers: authHeaders(),
-    body: body ? JSON.stringify(body) : undefined,
-  });
+async function parseJsonSafe(response) {
+  const text = await response.text();
+  if (!text) return {};
 
-  const data = await res.json().catch(() => ({}));
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: text.slice(0, 300) };
+  }
+}
+
+async function api(method, endpoint, body) {
+  const mode = await getAuthMode();
+
+  let res;
+  try {
+    res = await fetch(`${API_URL}${endpoint}`, {
+      method,
+      headers: authHeaders(),
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    return { ok: false, status: 0, data: { error: 'API indisponivel. Verifique se o backend esta rodando.' } };
+  }
+
+  const data = await parseJsonSafe(res);
 
   if (res.status === 401) {
     clearSession();
-    window.location.href = '/frontend/login.html';
+    if (mode.authEnabled) {
+      window.location.href = 'login.html';
+    }
     return;
   }
 
@@ -49,13 +117,25 @@ async function api(method, endpoint, body) {
 }
 
 const Auth = {
-  async login(email, password) {
-    const res = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
+  async login(identifier, password) {
+    const mode = await getAuthMode();
+    if (!mode.authEnabled) {
+      setToken('study-mode');
+      return { ok: true, data: { token: 'study-mode', mode: 'study' } };
+    }
+
+    let res;
+    try {
+      res = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, password }),
+      });
+    } catch {
+      return { ok: false, data: { error: 'API indisponivel. Verifique se o backend esta rodando.' } };
+    }
+
+    const data = await parseJsonSafe(res);
     if (res.ok && data.token) {
       setToken(data.token);
       return { ok: true, data };
@@ -63,19 +143,37 @@ const Auth = {
     return { ok: false, data };
   },
 
-  async register(email, password) {
-    const res = await fetch(`${API_URL}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
+  async register(email, username, password) {
+    const mode = await getAuthMode();
+    if (!mode.authEnabled) {
+      return { ok: true, data: { mode: 'study' } };
+    }
+
+    let res;
+    try {
+      res = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, username, password }),
+      });
+    } catch {
+      return { ok: false, data: { error: 'API indisponivel. Verifique se o backend esta rodando.' } };
+    }
+
+    const data = await parseJsonSafe(res);
     return { ok: res.ok, data };
   },
 
   logout() {
+    const authEnabled = isAuthEnabledCached();
     clearSession();
-    window.location.href = '/frontend/login.html';
+    if (authEnabled === false) {
+      setToken('study-mode');
+      window.location.href = 'dashboard.html';
+      return;
+    }
+
+    window.location.href = 'login.html';
   }
 };
 
@@ -120,10 +218,10 @@ function formatDate(isoStr) {
 // Helper: badge de status
 function statusBadge(status) {
   const map = {
-    running:  ['running', '● Running'],
-    building: ['building', '⟳ Building'],
-    failed:   ['failed', '✕ Failed'],
-    pending:  ['pending', '○ Pending'],
+    running:  ['running', 'Running'],
+    building: ['building', 'Building'],
+    failed:   ['failed', 'Failed'],
+    pending:  ['pending', 'Pending'],
   };
   const [cls, label] = map[status] || ['pending', status ?? '—'];
   return `<span class="badge badge-${cls}"><span class="dot"></span>${label}</span>`;

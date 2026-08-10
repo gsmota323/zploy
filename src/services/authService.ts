@@ -4,10 +4,14 @@ import * as jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 
-export async function authenticateUser(email: string, password: string) {
-  const user = await prisma.user.findUnique({
+export async function authenticateUser(identifier: string, password: string) {
+  const login = identifier.trim();
+  const user = await prisma.user.findFirst({
     where: {
-      email,
+      OR: [
+        { email: { equals: login, mode: "insensitive" } },
+        { username: { equals: login, mode: "insensitive" } },
+      ],
     },
   });
 
@@ -25,6 +29,7 @@ export async function authenticateUser(email: string, password: string) {
     {
       userId: user.id,
       email: user.email,
+      username: user.username,
     },
     process.env.JWT_SECRET as string,
     {

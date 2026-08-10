@@ -1,11 +1,25 @@
 import { Request, Response, NextFunction } from "express";
 import * as jwt from "jsonwebtoken";
+import { ensureStudyModeUserId } from "../services/studyModeService";
 
 export interface AuthRequest extends Request {
   userId?: string;
 }
 
-export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
+function isAuthEnabled() {
+  return process.env.AUTH_ENABLED !== "false";
+}
+
+export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (!isAuthEnabled()) {
+    try {
+      req.userId = await ensureStudyModeUserId();
+      return next();
+    } catch (error) {
+      return res.status(500).json({ error: "Não foi possível inicializar o usuário do modo estudo." });
+    }
+  }
+
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {

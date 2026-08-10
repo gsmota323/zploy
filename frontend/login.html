@@ -13,8 +13,8 @@
       justify-content: center;
       min-height: 100vh;
       background:
-        radial-gradient(ellipse 80% 60% at 30% 40%, rgba(124,92,252,0.18) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 40% at 80% 70%, rgba(0,212,255,0.10) 0%, transparent 50%),
+        radial-gradient(ellipse 80% 60% at 30% 40%, rgba(255,255,255,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 80% 70%, rgba(255,255,255,0.04) 0%, transparent 50%),
         var(--bg);
     }
 
@@ -43,12 +43,12 @@
     }
 
     .auth-box {
-      background: rgba(255,255,255,0.04);
+      background: rgba(255,255,255,0.03);
       border: 1px solid var(--border);
       border-radius: var(--radius-xl);
       padding: 40px;
-      backdrop-filter: blur(30px);
-      box-shadow: 0 32px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05) inset;
+      backdrop-filter: blur(18px);
+      box-shadow: 0 24px 70px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.03) inset;
     }
 
     .auth-tabs {
@@ -107,6 +107,65 @@
     }
 
     .input.with-icon { padding-left: 40px; }
+
+    .input.with-toggle { padding-right: 88px; }
+
+    .input-toggle {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      color: var(--text-secondary);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .input-toggle:hover {
+      color: var(--text);
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.18);
+    }
+
+    .field-feedback {
+      margin-top: 7px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      min-height: 1.1em;
+    }
+
+    .field-feedback.success { color: var(--success); }
+    .field-feedback.error { color: var(--danger); }
+
+    .strength-wrap {
+      margin-top: 8px;
+    }
+
+    .strength-bar {
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+
+    .strength-fill {
+      width: 0%;
+      height: 100%;
+      transition: width 180ms ease, background-color 180ms ease;
+      background: #ff4a6e;
+    }
+
+    .strength-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
 
     .btn-submit {
       width: 100%;
@@ -172,7 +231,7 @@
 
     <div class="auth-logo">
       <a href="index.html">
-        <span class="logo-icon">⚡</span>
+        <span class="logo-icon">Z</span>
         Zploy
       </a>
     </div>
@@ -186,25 +245,26 @@
 
       <!-- LOGIN -->
       <div id="view-login">
-        <h1 class="auth-title">Bem-vindo de volta 👋</h1>
+        <h1 class="auth-title">Bem-vindo de volta</h1>
         <p class="auth-subtitle">Faça login para acessar seus deploys e apps.</p>
 
         <div id="login-error" class="error-msg"></div>
 
         <div class="form">
           <div class="field">
-            <label class="label" for="login-email">E-mail</label>
+            <label class="label" for="login-identifier">Usuário ou e-mail</label>
             <div class="input-wrapper">
-              <span class="input-icon">✉️</span>
-              <input class="input with-icon" type="email" id="login-email" placeholder="seu@email.com" autocomplete="email">
+              <span class="input-icon">U</span>
+              <input class="input with-icon" type="text" id="login-identifier" placeholder="seu-usuario ou seu@email.com" autocomplete="username">
             </div>
           </div>
 
           <div class="field">
             <label class="label" for="login-password">Senha</label>
             <div class="input-wrapper">
-              <span class="input-icon">🔒</span>
-              <input class="input with-icon" type="password" id="login-password" placeholder="Sua senha" autocomplete="current-password">
+              <span class="input-icon">*</span>
+              <input class="input with-icon with-toggle" type="password" id="login-password" placeholder="Sua senha" autocomplete="current-password">
+              <button type="button" class="input-toggle" onclick="togglePasswordVisibility('login-password', this)">Mostrar</button>
             </div>
           </div>
 
@@ -216,7 +276,7 @@
 
       <!-- REGISTER -->
       <div id="view-register" style="display:none">
-        <h1 class="auth-title">Crie sua conta 🚀</h1>
+        <h1 class="auth-title">Crie sua conta</h1>
         <p class="auth-subtitle">Grátis e sem cartão de crédito. Comece a fazer deploys agora.</p>
 
         <div id="register-error" class="error-msg"></div>
@@ -224,9 +284,18 @@
 
         <div class="form">
           <div class="field">
+            <label class="label" for="reg-username">Nome de usuário</label>
+            <div class="input-wrapper">
+              <span class="input-icon">U</span>
+              <input class="input with-icon" type="text" id="reg-username" placeholder="ex: joao.silva" autocomplete="username">
+            </div>
+            <div id="reg-username-feedback" class="field-feedback">Use 3-30 caracteres: letras, números, ponto, _ ou -</div>
+          </div>
+
+          <div class="field">
             <label class="label" for="reg-email">E-mail</label>
             <div class="input-wrapper">
-              <span class="input-icon">✉️</span>
+              <span class="input-icon">@</span>
               <input class="input with-icon" type="email" id="reg-email" placeholder="seu@email.com" autocomplete="email">
             </div>
           </div>
@@ -234,9 +303,26 @@
           <div class="field">
             <label class="label" for="reg-password">Senha</label>
             <div class="input-wrapper">
-              <span class="input-icon">🔒</span>
-              <input class="input with-icon" type="password" id="reg-password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+              <span class="input-icon">*</span>
+              <input class="input with-icon with-toggle" type="password" id="reg-password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+              <button type="button" class="input-toggle" onclick="togglePasswordVisibility('reg-password', this)">Mostrar</button>
             </div>
+            <div class="strength-wrap">
+              <div class="strength-bar">
+                <div id="reg-password-strength-fill" class="strength-fill"></div>
+              </div>
+              <div id="reg-password-strength-label" class="strength-label">Força da senha: fraca</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="reg-password-confirm">Confirmar senha</label>
+            <div class="input-wrapper">
+              <span class="input-icon">*</span>
+              <input class="input with-icon with-toggle" type="password" id="reg-password-confirm" placeholder="Repita sua senha" autocomplete="new-password">
+              <button type="button" class="input-toggle" onclick="togglePasswordVisibility('reg-password-confirm', this)">Mostrar</button>
+            </div>
+            <div id="reg-password-confirm-feedback" class="field-feedback"></div>
           </div>
 
           <button class="btn btn-primary btn-submit" id="btn-register" onclick="doRegister()">
@@ -253,8 +339,13 @@
 
   <script src="js/api.js"></script>
   <script>
-    // Se já logado, redireciona
-    if (isLoggedIn()) window.location.href = 'dashboard.html';
+    async function bootstrapLoginPage() {
+      const mode = await getAuthMode();
+      if (!mode.authEnabled || isLoggedIn()) {
+        window.location.href = 'dashboard.html';
+      }
+    }
+    bootstrapLoginPage();
 
     // Checa URL para tab inicial
     const urlParams = new URLSearchParams(window.location.search);
@@ -272,13 +363,13 @@
     }
 
     async function doLogin() {
-      const email = document.getElementById('login-email').value.trim();
+      const identifier = document.getElementById('login-identifier').value.trim();
       const password = document.getElementById('login-password').value;
       const btn = document.getElementById('btn-login');
       const errEl = document.getElementById('login-error');
 
-      if (!email || !password) {
-        showError(errEl, 'Preencha e-mail e senha.');
+      if (!identifier || !password) {
+        showError(errEl, 'Preencha usuário/e-mail e senha.');
         return;
       }
 
@@ -286,26 +377,44 @@
       btn.disabled = true;
       errEl.classList.remove('visible');
 
-      const { ok, data } = await Auth.login(email, password);
+      const { ok, data } = await Auth.login(identifier, password);
 
       if (ok) {
         window.location.href = 'dashboard.html';
       } else {
-        showError(errEl, data?.error || 'E-mail ou senha inválidos.');
+        showError(errEl, data?.error || 'Usuário/e-mail ou senha inválidos.');
         btn.innerHTML = 'Entrar na plataforma';
         btn.disabled = false;
       }
     }
 
     async function doRegister() {
+      const username = document.getElementById('reg-username').value.trim();
       const email = document.getElementById('reg-email').value.trim();
       const password = document.getElementById('reg-password').value;
+      const passwordConfirm = document.getElementById('reg-password-confirm').value;
       const btn = document.getElementById('btn-register');
       const errEl = document.getElementById('register-error');
       const succEl = document.getElementById('register-success');
 
-      if (!email || !password) {
-        showError(errEl, 'Preencha e-mail e senha.');
+      if (!username || !email || !password || !passwordConfirm) {
+        showError(errEl, 'Preencha usuário, e-mail, senha e confirmação.');
+        return;
+      }
+
+      const usernameValidation = validateUsername(username);
+      if (!usernameValidation.ok) {
+        showError(errEl, usernameValidation.message);
+        return;
+      }
+
+      if (password.length < 6) {
+        showError(errEl, 'A senha deve ter no mínimo 6 caracteres.');
+        return;
+      }
+
+      if (password !== passwordConfirm) {
+        showError(errEl, 'As senhas não conferem.');
         return;
       }
 
@@ -314,12 +423,12 @@
       errEl.classList.remove('visible');
       succEl.classList.remove('visible');
 
-      const { ok, data } = await Auth.register(email, password);
+      const { ok, data } = await Auth.register(email, username, password);
 
       if (ok) {
-        succEl.textContent = '✔ Conta criada! Fazendo login...';
+        succEl.textContent = 'Conta criada. Fazendo login...';
         succEl.classList.add('visible');
-        const login = await Auth.login(email, password);
+        const login = await Auth.login(username, password);
         if (login.ok) {
           setTimeout(() => window.location.href = 'dashboard.html', 800);
         }
@@ -335,12 +444,106 @@
       el.classList.add('visible');
     }
 
+    function validateUsername(username) {
+      if (!username) {
+        return { ok: false, message: 'Informe um nome de usuário.' };
+      }
+
+      if (!/^[a-zA-Z0-9._-]{3,30}$/.test(username)) {
+        return { ok: false, message: 'Nome de usuário inválido. Use 3-30 caracteres (letras, números, ponto, _ ou -).' };
+      }
+
+      return { ok: true, message: 'Nome de usuário com formato válido.' };
+    }
+
+    function updateUsernameFeedback() {
+      const el = document.getElementById('reg-username-feedback');
+      const username = document.getElementById('reg-username').value.trim();
+      const result = validateUsername(username);
+
+      el.textContent = result.message;
+      el.classList.toggle('success', result.ok);
+      el.classList.toggle('error', !result.ok && username.length > 0);
+    }
+
+    function evaluatePasswordStrength(password) {
+      let score = 0;
+      if (password.length >= 6) score += 1;
+      if (password.length >= 10) score += 1;
+      if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
+      if (/\d/.test(password)) score += 1;
+      if (/[^A-Za-z0-9]/.test(password)) score += 1;
+
+      const pct = Math.min(100, score * 20);
+      let label = 'fraca';
+      let color = '#ff4a6e';
+
+      if (score >= 4) {
+        label = 'forte';
+        color = '#00e96a';
+      } else if (score >= 3) {
+        label = 'boa';
+        color = '#f7b500';
+      } else if (score >= 2) {
+        label = 'media';
+        color = '#ff8c42';
+      }
+
+      return { pct, label, color };
+    }
+
+    function updatePasswordStrength() {
+      const password = document.getElementById('reg-password').value;
+      const fill = document.getElementById('reg-password-strength-fill');
+      const label = document.getElementById('reg-password-strength-label');
+      const result = evaluatePasswordStrength(password);
+
+      fill.style.width = `${result.pct}%`;
+      fill.style.backgroundColor = result.color;
+      label.textContent = `Força da senha: ${result.label}`;
+    }
+
+    function updatePasswordConfirmFeedback() {
+      const password = document.getElementById('reg-password').value;
+      const confirmValue = document.getElementById('reg-password-confirm').value;
+      const feedback = document.getElementById('reg-password-confirm-feedback');
+
+      feedback.classList.remove('success', 'error');
+
+      if (!confirmValue) {
+        feedback.textContent = '';
+        return;
+      }
+
+      if (password === confirmValue) {
+        feedback.textContent = 'As senhas conferem.';
+        feedback.classList.add('success');
+      } else {
+        feedback.textContent = 'As senhas não conferem.';
+        feedback.classList.add('error');
+      }
+    }
+
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      btn.textContent = isPassword ? 'Ocultar' : 'Mostrar';
+    }
+
     // Enter key
     document.addEventListener('keydown', e => {
       if (e.key !== 'Enter') return;
       const loginVisible = document.getElementById('view-login').style.display !== 'none';
       if (loginVisible) doLogin(); else doRegister();
     });
+
+    document.getElementById('reg-username').addEventListener('input', updateUsernameFeedback);
+    document.getElementById('reg-password').addEventListener('input', () => {
+      updatePasswordStrength();
+      updatePasswordConfirmFeedback();
+    });
+    document.getElementById('reg-password-confirm').addEventListener('input', updatePasswordConfirmFeedback);
   </script>
 </body>
 </html>

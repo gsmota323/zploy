@@ -7,58 +7,50 @@
   <link rel="stylesheet" href="css/main.css">
   <style>
     .page-layout {
-      display: grid;
-      grid-template-columns: 220px 1fr;
+      display: block;
       min-height: 100vh;
     }
 
-    /* ===== SIDEBAR ===== */
-    .sidebar {
+    .topbar {
       position: sticky;
       top: 0;
-      height: 100vh;
-      background: var(--surface-solid);
-      border-right: 1px solid var(--border);
+      z-index: 20;
       display: flex;
-      flex-direction: column;
-      padding: 24px 16px;
-      gap: 8px;
-      overflow-y: auto;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 28px;
+      background: rgba(7, 7, 8, 0.88);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
     }
 
-    .sidebar-logo {
+    .topbar-left {
       display: flex;
       align-items: center;
       gap: 10px;
-      font-size: 1.15rem;
+      font-size: 1rem;
       font-weight: 800;
-      letter-spacing: -0.04em;
-      padding: 8px 12px;
-      margin-bottom: 16px;
+      letter-spacing: -0.02em;
     }
 
-    .sidebar-logo .logo-icon {
+    .topbar-left .logo-icon {
       width: 28px;
       height: 28px;
       font-size: 0.9rem;
     }
 
-    .sidebar-section-label {
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text-muted);
-      padding: 0 12px;
-      margin-top: 8px;
-      margin-bottom: 4px;
-    }
-
-    .sidebar-link {
+    .topbar-nav {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 9px 12px;
+      gap: 8px;
+    }
+
+    .topbar-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
       border-radius: var(--radius-sm);
       font-size: 0.9rem;
       font-weight: 500;
@@ -68,20 +60,9 @@
       text-decoration: none;
     }
 
-    .sidebar-link:hover, .sidebar-link.active {
+    .topbar-link:hover, .topbar-link.active {
       background: var(--surface-hover);
       color: var(--text);
-    }
-
-    .sidebar-link .icon { font-size: 1rem; }
-
-    .sidebar-bottom {
-      margin-top: auto;
-      border-top: 1px solid var(--border);
-      padding-top: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
     }
 
     /* ===== MAIN ===== */
@@ -90,8 +71,8 @@
     }
 
     .page-header {
-      padding: 40px 40px 0;
-      margin-bottom: 36px;
+      padding: 28px 28px 0;
+      margin-bottom: 24px;
     }
 
     .page-title {
@@ -107,7 +88,7 @@
     }
 
     .page-content {
-      padding: 0 40px 60px;
+      padding: 0 28px 48px;
     }
 
     /* ===== APPS GRID ===== */
@@ -236,25 +217,16 @@
 <body>
 
   <div class="page-layout">
-
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <a href="index.html" class="sidebar-logo">
-        <span class="logo-icon">⚡</span>
-        Zploy
-      </a>
-
-      <span class="sidebar-section-label">Plataforma</span>
-      <a class="sidebar-link active" href="dashboard.html">
-        <span class="icon">🏠</span> Dashboard
-      </a>
-
-      <div class="sidebar-bottom">
-        <div class="sidebar-link" onclick="Auth.logout()">
-          <span class="icon">🚪</span> Sair
-        </div>
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="logo-icon">D</span>
+        Dashboard
       </div>
-    </aside>
+      <nav class="topbar-nav">
+        <a class="topbar-link active" href="dashboard.html">Dashboard</a>
+        <button class="btn btn-ghost btn-sm" onclick="Auth.logout()">Sair</button>
+      </nav>
+    </header>
 
     <!-- MAIN -->
     <main class="main">
@@ -284,7 +256,7 @@
   <!-- MODAL CRIAR APP -->
   <div class="modal-overlay" id="modal-overlay" onclick="closeModalOnOverlay(event)">
     <div class="modal">
-      <h2 class="modal-title">Novo App 🚀</h2>
+      <h2 class="modal-title">Novo App</h2>
       <p class="modal-subtitle">Dê um nome único para a sua aplicação. Você poderá configurar o deploy na próxima tela.</p>
       <div class="modal-form">
         <div class="field">
@@ -322,28 +294,48 @@
 
   <script src="js/api.js"></script>
   <script>
-    requireAuth();
+    async function bootstrap() {
+      const allowed = await requireAuth();
+      if (!allowed) return;
+      loadApps();
+    }
 
     async function loadApps() {
       const grid = document.getElementById('apps-grid');
       const { ok, data } = await Apps.list();
+      const debugMode = new URLSearchParams(window.location.search).get('debug') === '1';
 
-      if (!ok || !Array.isArray(data)) {
-        grid.innerHTML = `<div class="empty-state"><span class="empty-icon">⚠️</span><p class="empty-title">Erro ao carregar apps</p></div>`;
+      const apps = Array.isArray(data) ? data : [];
+
+      if (!ok && apps.length === 0) {
+        const details = data?.error ? escHtml(data.error) : '';
+        const subtitle = details
+          ? 'Nao foi possivel carregar seus apps agora.'
+          : 'Voce ainda nao criou nenhum app.';
+        grid.innerHTML = `
+          <div class="empty-state">
+            <p class="empty-title">Nenhum app para exibir agora</p>
+            <p style="color:var(--text-muted);font-size:0.9rem;margin-top:6px;">${subtitle}</p>
+            ${(debugMode && details) ? `<p style="color:var(--text-muted);font-size:0.82rem;margin-top:6px;">Detalhe: ${details}</p>` : ''}
+            <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+              <button class="btn btn-secondary" onclick="loadApps()">Tentar novamente</button>
+              <button class="btn btn-primary" onclick="openModal()">Criar App</button>
+            </div>
+          </div>`;
         return;
       }
 
       let html = '';
 
-      if (data.length === 0) {
+      if (apps.length === 0) {
         html = `
           <div class="add-app-card" onclick="openModal()">
             <div class="add-icon">+</div>
-            <div style="font-weight:600;font-size:0.95rem;">Criar primeiro App</div>
-            <div style="font-size:0.85rem;">Clique para começar</div>
+            <div style="font-weight:600;font-size:0.95rem;">Nenhum app criado</div>
+            <div style="font-size:0.85rem;">Clique para criar seu primeiro app</div>
           </div>`;
       } else {
-        html = data.map(app => {
+        html = apps.map(app => {
           const initials = app.name.slice(0,2).toUpperCase();
           return `
             <a href="app.html?id=${app.id}" class="app-card fade-in-up">
@@ -423,7 +415,7 @@
       if (e.key === 'Enter') createApp();
     });
 
-    loadApps();
+    bootstrap();
   </script>
 </body>
 </html>

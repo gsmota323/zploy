@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function createUser(email: string, passwordText: string) {
+export async function createUser(email: string, passwordText: string, username?: string) {
   // 1. Criptografa a senha antes de salvar
   const hashedPassword = await bcrypt.hash(passwordText, 10);
   
@@ -11,12 +11,14 @@ export async function createUser(email: string, passwordText: string) {
   const user = await prisma.user.create({
     data: {
       email,
+      username,
       password: hashedPassword,
     },
     // Dica de segurança: Selecionamos apenas id e email para não devolver o hash da senha pro Controller
     select: {
       id: true,
-      email: true
+      email: true,
+      username: true,
     }
   });
 
@@ -27,7 +29,8 @@ export async function getAllUsers() {
   return await prisma.user.findMany({
     select: {
       id: true,
-      email: true
+      email: true,
+      username: true,
     }
   });
 }
