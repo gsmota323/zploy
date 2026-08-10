@@ -8,6 +8,7 @@ import { PrismaClient } from "@prisma/client";
 import { createDeployLog } from "../services/deployLogService";
 import { runCommandWithLogs } from "../utils/runCommandWithLogs";
 import { deployToKubernetes } from "../utils/kubernetes";
+import { inferContainerPort, resolveDockerfileContent } from "../utils/dockerfile";
 
 const execAsync = promisify(exec);
 const prisma = new PrismaClient();
@@ -15,10 +16,12 @@ const prisma = new PrismaClient();
 export const worker = new Worker(
   "DeployQueue",
   async (job: Job) => {
-    const { appId, repositoryUrl, deployId } = job.data as {
+    const { appId, repositoryUrl, deployId, dockerfile, branch } = job.data as {
       appId: string;
       repositoryUrl: string;
       deployId: string;
+      dockerfile?: string;
+      branch?: string;
     };
 
     if (!appId || !repositoryUrl || !deployId) {
@@ -27,8 +30,12 @@ export const worker = new Worker(
 
     const tempDeployDir = path.join(__dirname, "..", "..", "temp-deploys", appId);
 
+    const app = await prisma.app.findUnique({ where: { id: appId } });
+    const targetBranch = branch || (app as { deploymentBranch?: string } | null)?.deploymentBranch || "main";
+
     console.log(`\n[Worker] Iniciando job ${job.id} para o App: ${appId}`);
     console.log(`[Worker] Repositório alvo: ${repositoryUrl}`);
+    console.log(`[Worker] Branch alvo: ${targetBranch}`);
     console.log(`[Worker] Diretório temporário: ${tempDeployDir}`);
 
     try {
@@ -75,9 +82,13 @@ export const worker = new Worker(
         message: "Baixando código do repositório.",
       });
 
+      const cloneArgs = targetBranch && targetBranch !== "main"
+        ? ["clone", "--branch", targetBranch, "--single-branch", repositoryUrl, tempDeployDir]
+        : ["clone", repositoryUrl, tempDeployDir];
+
       await runCommandWithLogs({
         command: "git",
-        args: ["clone", repositoryUrl, tempDeployDir],
+        args: cloneArgs,
         deployId,
         type: "build",
       });
@@ -125,7 +136,11 @@ export const worker = new Worker(
         );
       }
 
-      const containerPort = runtime === "Node" ? 5006 : 8000;
+      const dockerfileContent = resolveDockerfileContent({
+        runtime,
+        customDockerfile: dockerfile,
+      });
+      const containerPort = inferContainerPort(dockerfileContent, runtime);
 
       await createDeployLog({
         deployId,
@@ -135,34 +150,6 @@ export const worker = new Worker(
       });
 
       const dockerfilePath = path.join(tempDeployDir, "Dockerfile");
-      let dockerfileContent = "";
-
-      if (runtime === "Node") {
-        dockerfileContent = `
-FROM node:18-alpine
-WORKDIR /usr/src/app
-COPY package*.json ./
-RUN npm install
-COPY . .
-ENV PORT=5006
-EXPOSE 5006
-CMD ["npm", "start"]
-        `.trim();
-      }
-
-      if (runtime === "Python") {
-        dockerfileContent = `
-FROM python:3.9-slim
-WORKDIR /usr/src/app
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-ENV PORT=8000
-EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-        `.trim();
-      }
-
       fs.writeFileSync(dockerfilePath, dockerfileContent, {
         encoding: "utf-8",
       });
@@ -207,7 +194,6 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
         message: "Iniciando aplicação.",
       });
 
-      const app = await prisma.app.findUnique({ where: { id: appId } });
       const envVars = await prisma.envVar.findMany({
         where: { appId },
       });

@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { normalizeRepositoryUrl } from '../utils/githubWebhook';
 
 const prisma = new PrismaClient();
 
@@ -9,13 +10,19 @@ export async function createApp(
     minReplicas?: number;
     maxReplicas?: number;
     targetCPUUtilizationPercentage?: number;
+    repositoryUrl?: string;
+    deploymentBranch?: string;
   }
 ) {
-  // Cria o app já amarrado ao ID do usuário logado
+  const repositoryUrl = normalizeRepositoryUrl(config?.repositoryUrl);
+  const deploymentBranch = config?.deploymentBranch?.trim() || 'main';
+
   return await prisma.app.create({
     data: {
       name,
       userId,
+      repositoryUrl,
+      deploymentBranch,
       minReplicas: config?.minReplicas ?? 1,
       maxReplicas: config?.maxReplicas ?? 3,
       targetCPUUtilizationPercentage: config?.targetCPUUtilizationPercentage ?? 70,

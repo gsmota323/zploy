@@ -21,6 +21,7 @@ model App {
   name                          String   @unique
   userId                        String
   repositoryUrl                 String?
+  deploymentBranch              String   @default("main")
   status                        String   @default("pending")
   url                           String?
   minReplicas                   Int      @default(1)

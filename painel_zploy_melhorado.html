@@ -428,6 +428,11 @@
                     <input type="text" id="repoUrl" value="https://github.com/treinamento-node/simple-api" placeholder="URL do Repositório GitHub">
                 </div>
 
+                <div class="field">
+                    <label for="dockerfileText">Dockerfile personalizado (opcional)</label>
+                    <textarea id="dockerfileText" rows="10" style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft);color:var(--text);font-family:'Cascadia Code','Fira Code',monospace;font-size:0.9rem;resize:vertical;" placeholder="FROM node:18-alpine&#10;WORKDIR /usr/src/app&#10;COPY . .&#10;CMD [&quot;node&quot;, &quot;server.js&quot;]"></textarea>
+                </div>
+
                 <button class="btn-success" onclick="fazerDeploy()">Disparar Deploy</button>
             </div>
 
@@ -597,10 +602,12 @@
                     return;
                 }
 
+                const dockerfile = document.getElementById('dockerfileText').value.trim();
+
                 const res = await fetch(`${API_URL}/apps/${appId}/deploy`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token')},
-                    body: JSON.stringify({ repositoryUrl: repoUrl })
+                    body: JSON.stringify({ repositoryUrl: repoUrl, dockerfile })
                 });
                 log(await res.json());
             } catch (err) {

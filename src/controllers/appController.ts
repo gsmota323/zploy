@@ -3,12 +3,13 @@ import { AuthRequest } from '../middlewares/authMiddleware';
 import { createApp, getUserApps, deleteApp } from '../services/appService';
 import { addDeployJob } from '../queues/deployQueue';
 import { PrismaClient } from '@prisma/client';
+import { normalizeRepositoryUrl } from '../utils/githubWebhook';
 
 const prisma = new PrismaClient();
 
 export async function create(req: AuthRequest, res: Response) {
   try {
-    const { name, minReplicas, maxReplicas, targetCPUUtilizationPercentage } = req.body;
+    const { name, repositoryUrl, deploymentBranch, minReplicas, maxReplicas, targetCPUUtilizationPercentage } = req.body;
     const userId = req.userId;
 
     if (!userId) {
@@ -16,6 +17,8 @@ export async function create(req: AuthRequest, res: Response) {
     }
 
     const app = await createApp(name, String(userId), {
+      repositoryUrl,
+      deploymentBranch,
       minReplicas,
       maxReplicas,
       targetCPUUtilizationPercentage,
@@ -65,14 +68,58 @@ export async function remove(req: AuthRequest, res: Response) {
   }
 }
 
+export async function redeployLast(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const appId = Array.isArray(id) ? id[0] : id;
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Usuário não autenticado.' });
+    }
+
+    const app = await prisma.app.findFirst({
+      where: { id: appId, userId },
+    });
+
+    if (!app) {
+      return res.status(404).json({ error: 'Aplicativo não encontrado.' });
+    }
+
+    if (!app.repositoryUrl) {
+      return res.status(400).json({ error: 'Este app não possui um repositório associado.' });
+    }
+
+    const newDeploy = await prisma.deploy.create({
+      data: {
+        appId: app.id,
+        status: 'pending',
+      },
+    });
+
+    await prisma.app.update({
+      where: { id: app.id },
+      data: { status: 'pending' },
+    });
+
+    const job = await addDeployJob(app.id, app.repositoryUrl, newDeploy.id, undefined, (app as { deploymentBranch?: string }).deploymentBranch || 'main');
+
+    return res.status(202).json({
+      message: 'Deploy reexecutado com sucesso!',
+      deployId: newDeploy.id,
+      jobId: job.id,
+      branch: (app as { deploymentBranch?: string }).deploymentBranch || 'main',
+    });
+  } catch (error) {
+    console.error('Erro ao reexecutar deploy:', error);
+    return res.status(500).json({ error: 'Erro interno ao reexecutar deploy.' });
+  }
+}
+
 export async function startDeploy(req: Request, res: Response) {
   try {
     const { id } = req.params; // appId
-    const { repositoryUrl, minReplicas, maxReplicas, targetCPUUtilizationPercentage } = req.body;
-
-    if (!repositoryUrl) {
-      return res.status(400).json({ error: "O link do repositório é obrigatório." });
-    }
+    const { repositoryUrl, deploymentBranch, minReplicas, maxReplicas, targetCPUUtilizationPercentage } = req.body;
 
     // Identificar o appId de forma segura
     const appId = Array.isArray(id) ? id[0] : id;
@@ -80,6 +127,13 @@ export async function startDeploy(req: Request, res: Response) {
     const app = await prisma.app.findUnique({ where: { id: appId } });
     if (!app) {
       return res.status(404).json({ error: "Aplicativo não encontrado." });
+    }
+
+    const repositoryUrlToUse = normalizeRepositoryUrl(repositoryUrl) ?? normalizeRepositoryUrl(app.repositoryUrl);
+    const branchToUse = deploymentBranch?.toString().trim() || (app as { deploymentBranch?: string }).deploymentBranch || 'main';
+
+    if (!repositoryUrlToUse) {
+      return res.status(400).json({ error: "O link do repositório é obrigatório." });
     }
 
     const nextConfig = {
@@ -92,7 +146,12 @@ export async function startDeploy(req: Request, res: Response) {
 
     await prisma.app.update({
       where: { id: appId },
-      data: nextConfig,
+      data: {
+        ...nextConfig,
+        repositoryUrl: repositoryUrlToUse,
+        deploymentBranch: branchToUse,
+        status: 'pending',
+      },
     });
 
     const newDeploy = await prisma.deploy.create({
@@ -102,13 +161,14 @@ export async function startDeploy(req: Request, res: Response) {
       }
     });
 
-    const job = await addDeployJob(appId, repositoryUrl, newDeploy.id);
+    const job = await addDeployJob(appId, repositoryUrlToUse, newDeploy.id, undefined, branchToUse);
 
     return res.status(202).json({
       message: "Deploy na fila!",
       deployId: newDeploy.id,
       jobId: job.id,
       autoscaling: nextConfig,
+      branch: branchToUse,
     });
   } catch (error) {
     console.error("Erro ao enviar deploy para a fila:", error);

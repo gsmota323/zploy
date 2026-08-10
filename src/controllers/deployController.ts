@@ -13,7 +13,7 @@ const execAsync = promisify(exec);
 export async function startDeploy(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
-    const { repositoryUrl } = req.body;
+    const { repositoryUrl, dockerfile, deploymentBranch } = req.body;
 
     const userId = req.userId;
 
@@ -63,17 +63,20 @@ export async function startDeploy(req: AuthRequest, res: Response) {
       message: "Deploy criado com status pending.",
     });
 
+    const branchToUse = deploymentBranch?.toString().trim() || (app as { deploymentBranch?: string }).deploymentBranch || 'main';
+
     await prisma.app.update({
       where: {
         id: app.id,
       },
       data: {
         repositoryUrl,
+        deploymentBranch: branchToUse,
         status: "pending",
       },
     });
 
-    await addDeployJob(app.id, repositoryUrl, newDeploy.id);
+    await addDeployJob(app.id, repositoryUrl, newDeploy.id, dockerfile, branchToUse);
 
     await createDeployLog({
       deployId: newDeploy.id,
