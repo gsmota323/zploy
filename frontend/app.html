@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>App — Zploy</title>
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    .page-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: sticky; top: 0; height: 100vh;
+      background: var(--surface-solid);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 24px 16px; gap: 8px; overflow-y: auto;
+    }
+
+    .sidebar-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.15rem; font-weight: 800; letter-spacing: -0.04em;
+      padding: 8px 12px; margin-bottom: 16px;
+    }
+    .sidebar-logo .logo-icon { width: 28px; height: 28px; font-size: 0.9rem; }
+
+    .sidebar-link {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: var(--radius-sm);
+      font-size: 0.9rem; font-weight: 500; color: var(--text-secondary);
+      cursor: pointer; transition: all var(--transition); text-decoration: none;
+    }
+    .sidebar-link:hover { background: var(--surface-hover); color: var(--text); }
+    .sidebar-bottom {
+      margin-top: auto; border-top: 1px solid var(--border);
+      padding-top: 16px; display: flex; flex-direction: column; gap: 4px;
+    }
+
+    .main { overflow-y: auto; }
+
+    .page-header {
+      padding: 40px 40px 0;
+      margin-bottom: 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .app-header-top {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .app-big-icon {
+      width: 52px; height: 52px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; font-weight: 800; color: white;
+      flex-shrink: 0;
+    }
+
+    .app-header-info { flex: 1; }
+    .app-name { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; }
+
+    .app-url-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 0.82rem; color: var(--primary);
+      background: rgba(124,92,252,0.1); border: 1px solid rgba(124,92,252,0.2);
+      padding: 4px 10px; border-radius: 999px; margin-top: 6px;
+      cursor: pointer;
+    }
+
+    .page-content { padding: 32px 40px 60px; }
+
+    /* TABS */
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 32px; }
+    .tab {
+      padding: 12px 20px; font-size: 0.9rem; font-weight: 500;
+      color: var(--text-muted); border-bottom: 2px solid transparent;
+      cursor: pointer; transition: all var(--transition);
+    }
+    .tab:hover { color: var(--text-secondary); }
+    .tab.active { color: var(--text); border-color: var(--primary); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* OVERVIEW */
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+    }
+    .stat-card-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+    .stat-card-value { font-size: 1.25rem; font-weight: 700; }
+
+    /* DEPLOY */
+    .deploy-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 28px;
+    }
+
+    .history-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .history-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+
+    /* LOGS TERMINAL */
+    .terminal-wrapper {
+      background: var(--terminal-bg);
+      border: 1px solid rgba(0,245,122,0.15);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .terminal-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 14px 20px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .terminal-dots-row { display: flex; gap: 6px; align-items: center; }
+    .td { width: 12px; height: 12px; border-radius: 50%; }
+
+    .terminal-body {
+      padding: 20px;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.87rem;
+      color: var(--terminal-text);
+      line-height: 1.8;
+      min-height: 320px;
+      max-height: 480px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* SETTINGS */
+    .settings-section { margin-bottom: 36px; }
+    .settings-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
+
+    .env-list { display: flex; flex-direction: column; gap: 8px; }
+    .env-item {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 16px;
+    }
+    .env-key { font-size: 0.88rem; font-weight: 700; color: var(--accent); min-width: 120px; }
+    .env-val { font-size: 0.88rem; color: var(--text-secondary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .danger-zone {
+      background: var(--danger-surface);
+      border: 1px solid rgba(255,74,110,0.2);
+      border-radius: var(--radius-lg);
+      padding: 24px 28px;
+    }
+
+    .danger-title { color: var(--danger); font-weight: 700; margin-bottom: 6px; }
+    .danger-desc { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 16px; }
+
+    /* STATUS CARD */
+    .k8s-status-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px 28px;
+    }
+
+    .loading { display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .error-msg { background:var(--danger-surface);border:1px solid rgba(255,74,110,0.3);border-radius:var(--radius-sm);padding:12px 16px;font-size:0.88rem;color:var(--danger);display:none; }
+    .error-msg.visible { display:block; }
+    .success-msg { background:var(--success-surface);border:1px solid rgba(0,233,106,0.3);border-radius:var(--radius-sm);padding:12px 16px;font-size:0.88rem;color:var(--success);display:none; }
+    .success-msg.visible { display:block; }
+  </style>
+</head>
+<body>
+
+  <div class="page-layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <a href="index.html" class="sidebar-logo">
+        <span class="logo-icon">⚡</span>
+        Zploy
+      </a>
+      <a class="sidebar-link" href="dashboard.html">
+        <span>🏠</span> Dashboard
+      </a>
+      <div class="sidebar-bottom">
+        <div class="sidebar-link" onclick="Auth.logout()">
+          <span>🚪</span> Sair
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <div class="page-header">
+        <div class="app-header-top">
+          <div class="app-big-icon" id="app-icon">—</div>
+          <div class="app-header-info">
+            <div class="flex items-center gap-12 flex-wrap">
+              <h1 class="app-name" id="app-name">Carregando...</h1>
+              <div id="app-status-badge"></div>
+            </div>
+            <div id="app-url-chip" class="app-url-chip" style="display:none"></div>
+          </div>
+          <div id="header-actions" class="flex gap-8"></div>
+        </div>
+
+        <div class="tabs">
+          <div class="tab active" onclick="switchTab('overview', this)">Visão geral</div>
+          <div class="tab" onclick="switchTab('deploy', this)">Deploy</div>
+          <div class="tab" onclick="switchTab('logs', this)">Logs</div>
+          <div class="tab" onclick="switchTab('settings', this)">Configurações</div>
+        </div>
+      </div>
+
+      <div class="page-content">
+
+        <!-- OVERVIEW -->
+        <div class="tab-content active" id="tab-overview">
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-card-label">Status</div>
+              <div class="stat-card-value" id="ov-status">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Réplicas</div>
+              <div class="stat-card-value" id="ov-replicas">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">URL Pública</div>
+              <div class="stat-card-value" id="ov-url" style="font-size:0.95rem">—</div>
+            </div>
+          </div>
+
+          <div class="k8s-status-card">
+            <div class="flex justify-between items-center" style="margin-bottom:20px">
+              <div>
+                <div style="font-weight:700;margin-bottom:4px">Status Kubernetes</div>
+                <div style="font-size:0.88rem;color:var(--text-secondary)">Estado atual do deployment no cluster</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="loadK8sStatus()">Atualizar</button>
+            </div>
+            <div id="k8s-status-body" style="color:var(--text-muted);font-size:0.9rem">Clique em "Atualizar" para verificar.</div>
+            <div id="k8s-rollback-area" style="margin-top:16px;display:none">
+              <div class="divider"></div>
+              <div class="flex items-center justify-between flex-wrap gap-12">
+                <div>
+                  <div style="font-weight:700;color:var(--danger)">⚠️ Rollback recomendado</div>
+                  <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px">O sistema detectou instabilidade no deployment atual.</div>
+                </div>
+                <button class="btn btn-danger" onclick="doRollback()">↩ Reverter para versão anterior</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DEPLOY -->
+        <div class="tab-content" id="tab-deploy">
+          <div class="deploy-form">
+            <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:4px">Disparar novo deploy</h2>
+            <p style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:20px">Informe o repositório público do GitHub para iniciar o pipeline de build.</p>
+            <div class="field" style="margin-bottom:16px">
+              <label class="label" for="repo-url">URL do repositório</label>
+              <input class="input" type="text" id="repo-url" placeholder="https://github.com/usuario/repositorio">
+            </div>
+            <div id="deploy-msg" class="success-msg" style="margin-bottom:12px"></div>
+            <div id="deploy-error" class="error-msg" style="margin-bottom:12px"></div>
+            <button class="btn btn-primary" id="btn-deploy" onclick="doDeploy()">🚀 Disparar Deploy</button>
+          </div>
+
+          <div>
+            <h3 style="font-size:1rem;font-weight:700;margin-bottom:16px">Histórico de Deploys</h3>
+            <div class="history-list" id="history-list">
+              <div style="color:var(--text-muted);font-size:0.9rem">Nenhum deploy registrado ainda.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LOGS -->
+        <div class="tab-content" id="tab-logs">
+          <div class="flex justify-between items-center" style="margin-bottom:16px">
+            <div>
+              <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:4px">Logs do Container</h2>
+              <p style="font-size:0.88rem;color:var(--text-secondary)">Últimas 200 linhas do pod em execução no Kubernetes.</p>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="loadLogs()">Atualizar Logs</button>
+          </div>
+
+          <div class="terminal-wrapper">
+            <div class="terminal-head">
+              <div class="terminal-dots-row">
+                <span class="td" style="background:#ff5f57"></span>
+                <span class="td" style="background:#ffbd2e"></span>
+                <span class="td" style="background:#28c840"></span>
+              </div>
+              <span style="font-size:0.78rem;color:var(--text-muted)">pod logs</span>
+              <button class="btn btn-ghost btn-sm" onclick="clearLogs()">Limpar</button>
+            </div>
+            <div class="terminal-body" id="terminal">Clique em "Atualizar Logs" para buscar os logs do container...</div>
+          </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div class="tab-content" id="tab-settings">
+          <div class="settings-section">
+            <h3 class="settings-title">Variáveis de Ambiente</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin-bottom:16px;align-items:end">
+              <div class="field">
+                <label class="label">Chave</label>
+                <input class="input" type="text" id="env-key" placeholder="NODE_ENV">
+              </div>
+              <div class="field">
+                <label class="label">Valor</label>
+                <input class="input" type="text" id="env-val" placeholder="production">
+              </div>
+              <button class="btn btn-primary" onclick="addEnv()">Adicionar</button>
+            </div>
+            <div class="env-list" id="env-list">
+              <div style="color:var(--text-muted);font-size:0.9rem">Nenhuma variável configurada.</div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="danger-zone">
+            <div class="danger-title">⚠️ Zona de Perigo</div>
+            <p class="danger-desc">Ao deletar o app, todos os deploys, variáveis de ambiente e recursos do Kubernetes associados serão removidos permanentemente.</p>
+            <button class="btn btn-danger" onclick="deleteApp()">🗑 Deletar este App</button>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    requireAuth();
+
+    const appId = getAppIdFromUrl();
+    if (!appId) window.location.href = 'dashboard.html';
+
+    let currentApp = null;
+
+    async function loadApp() {
+      const { ok, data } = await Apps.list();
+      if (!ok) return;
+      const apps = Array.isArray(data) ? data : [];
+      currentApp = apps.find(a => a.id === appId);
+      if (!currentApp) { window.location.href = 'dashboard.html'; return; }
+
+      const name = currentApp.name;
+      document.title = `${name} — Zploy`;
+      document.getElementById('app-name').textContent = name;
+      document.getElementById('app-icon').textContent = name.slice(0,2).toUpperCase();
+      document.getElementById('app-status-badge').innerHTML = statusBadge(currentApp.status);
+
+      const urlChip = document.getElementById('app-url-chip');
+      if (currentApp.url) {
+        urlChip.style.display = '';
+        urlChip.innerHTML = `🌐 ${escHtml(currentApp.url)}`;
+        urlChip.onclick = () => window.open(currentApp.url, '_blank');
+      }
+
+      document.getElementById('ov-status').innerHTML = statusBadge(currentApp.status);
+      document.getElementById('ov-url').textContent = currentApp.url || 'Sem deploy';
+      document.getElementById('repo-url').value = currentApp.repositoryUrl || '';
+
+      loadHistory();
+      loadEnvs();
+    }
+
+    function switchTab(name, el) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById('tab-' + name).classList.add('active');
+      if (name === 'logs') loadLogs();
+    }
+
+    async function loadK8sStatus() {
+      const body = document.getElementById('k8s-status-body');
+      const rollbackArea = document.getElementById('k8s-rollback-area');
+      body.textContent = 'Consultando cluster Kubernetes...';
+      rollbackArea.style.display = 'none';
+
+      const { ok, data } = await Kubernetes.status(appId);
+
+      if (!ok || !data.success) {
+        body.textContent = data?.error || 'Kubernetes indisponível ou app sem deployment.';
+        return;
+      }
+
+      const h = data.health;
+      body.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+          <div><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">STATUS</div><strong>${escHtml(data.status)}</strong></div>
+          <div><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">RÉPLICAS</div><strong>${h.availableReplicas} / ${h.replicas}</strong></div>
+          <div><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">SAÚDE</div><strong style="color:${h.healthy ? 'var(--success)' : 'var(--danger)'}">${h.healthy ? '✔ Saudável' : '✕ Problema'}</strong></div>
+        </div>
+        <div style="margin-top:14px;font-size:0.85rem;color:var(--text-secondary)">${escHtml(h.message)}</div>
+      `;
+
+      document.getElementById('ov-replicas').textContent = `${h.availableReplicas} / ${h.replicas}`;
+
+      if (data.recoveryDecision?.shouldRollback) {
+        rollbackArea.style.display = 'block';
+      }
+    }
+
+    async function doRollback() {
+      if (!confirm('Tem certeza? O deploy atual será revertido para a versão anterior.')) return;
+      const { ok, data } = await Kubernetes.rollback(appId);
+      alert(ok ? '✔ Rollback iniciado com sucesso!' : `Erro: ${data?.error}`);
+      if (ok) {
+        document.getElementById('k8s-rollback-area').style.display = 'none';
+        loadK8sStatus();
+      }
+    }
+
+    async function doDeploy() {
+      const repoUrl = document.getElementById('repo-url').value.trim();
+      const btn = document.getElementById('btn-deploy');
+      const msgEl = document.getElementById('deploy-msg');
+      const errEl = document.getElementById('deploy-error');
+
+      if (!repoUrl) {
+        errEl.textContent = 'Informe a URL do repositório.';
+        errEl.classList.add('visible');
+        return;
+      }
+
+      btn.innerHTML = '<span class="loading"></span> Enviando para fila...';
+      btn.disabled = true;
+      msgEl.classList.remove('visible');
+      errEl.classList.remove('visible');
+
+      const { ok, data } = await Apps.deploy(appId, repoUrl);
+
+      if (ok) {
+        msgEl.textContent = '✔ Deploy enfileirado! Acompanhe os logs em breve.';
+        msgEl.classList.add('visible');
+        setTimeout(() => { switchTab('logs', document.querySelector('.tab:nth-child(3)')); }, 1500);
+      } else {
+        errEl.textContent = data?.error || 'Erro ao disparar deploy.';
+        errEl.classList.add('visible');
+      }
+
+      btn.innerHTML = '🚀 Disparar Deploy';
+      btn.disabled = false;
+    }
+
+    async function loadHistory() {
+      const list = document.getElementById('history-list');
+      const { ok, data } = await Apps.list();
+      if (!ok) return;
+      const app = Array.isArray(data) ? data.find(a => a.id === appId) : null;
+      if (!app || !app.deploys || app.deploys.length === 0) return;
+
+      list.innerHTML = app.deploys.slice(0, 10).map(d => `
+        <div class="history-item">
+          <div>
+            <div style="font-size:0.88rem;font-weight:700;">${formatDate(d.createdAt)}</div>
+            <div style="font-size:0.8rem;color:var(--text-muted)">${escHtml(d.id.slice(0,8))}...</div>
+          </div>
+          ${statusBadge(d.status)}
+        </div>
+      `).join('');
+    }
+
+    async function loadLogs() {
+      const terminal = document.getElementById('terminal');
+      terminal.textContent = '> Buscando logs do Kubernetes...\n';
+      const { ok, data } = await Kubernetes.logs(appId);
+      if (ok && data.logs) {
+        terminal.textContent = data.logs || '> Container sem logs disponíveis.';
+        terminal.scrollTop = terminal.scrollHeight;
+      } else {
+        terminal.textContent = `> ${data?.error || 'Erro ao buscar logs. Kubernetes pode estar indisponível.'}`;
+      }
+    }
+
+    function clearLogs() {
+      document.getElementById('terminal').textContent = '> Terminal limpo.\n';
+    }
+
+    async function loadEnvs() {
+      const list = document.getElementById('env-list');
+      const { ok, data } = await Envs.list(appId);
+      if (!ok || !Array.isArray(data) || data.length === 0) return;
+
+      list.innerHTML = data.map(env => `
+        <div class="env-item">
+          <span class="env-key">${escHtml(env.key)}</span>
+          <span class="env-val">••••••</span>
+          <button class="btn btn-danger btn-sm" onclick="deleteEnv('${env.id}')">Remover</button>
+        </div>
+      `).join('');
+    }
+
+    async function addEnv() {
+      const key = document.getElementById('env-key').value.trim();
+      const value = document.getElementById('env-val').value.trim();
+      if (!key || !value) return alert('Informe chave e valor.');
+      const { ok } = await Envs.add(appId, key, value);
+      if (ok) {
+        document.getElementById('env-key').value = '';
+        document.getElementById('env-val').value = '';
+        loadEnvs();
+      } else alert('Erro ao adicionar variável.');
+    }
+
+    async function deleteEnv(envId) {
+      const { ok } = await Envs.delete(appId, envId);
+      if (ok) loadEnvs(); else alert('Erro ao remover.');
+    }
+
+    async function deleteApp() {
+      if (!confirm(`Tem certeza que quer deletar "${currentApp?.name}"? Esta ação é irreversível.`)) return;
+      const { ok } = await Apps.delete(appId);
+      if (ok) window.location.href = 'dashboard.html';
+      else alert('Erro ao deletar app.');
+    }
+
+    function escHtml(v) {
+      return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    loadApp();
+  </script>
+</body>
+</html>

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Zploy</title>
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    .page-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ===== SIDEBAR ===== */
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      background: var(--surface-solid);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 24px 16px;
+      gap: 8px;
+      overflow-y: auto;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      padding: 8px 12px;
+      margin-bottom: 16px;
+    }
+
+    .sidebar-logo .logo-icon {
+      width: 28px;
+      height: 28px;
+      font-size: 0.9rem;
+    }
+
+    .sidebar-section-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      padding: 0 12px;
+      margin-top: 8px;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--transition);
+      text-decoration: none;
+    }
+
+    .sidebar-link:hover, .sidebar-link.active {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
+
+    .sidebar-link .icon { font-size: 1rem; }
+
+    .sidebar-bottom {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    /* ===== MAIN ===== */
+    .main {
+      overflow-y: auto;
+    }
+
+    .page-header {
+      padding: 40px 40px 0;
+      margin-bottom: 36px;
+    }
+
+    .page-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .page-subtitle {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    .page-content {
+      padding: 0 40px 60px;
+    }
+
+    /* ===== APPS GRID ===== */
+    .apps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .app-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      cursor: pointer;
+      transition: all var(--transition);
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .app-card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    }
+
+    .app-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .app-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: white;
+    }
+
+    .app-card-name {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .app-card-url {
+      font-size: 0.78rem;
+      color: var(--primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .app-card-url:empty::after {
+      content: 'Sem deploy ainda';
+      color: var(--text-muted);
+    }
+
+    .app-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .add-app-card {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      text-align: center;
+      min-height: 160px;
+      transition: all var(--transition);
+      color: var(--text-muted);
+    }
+
+    .add-app-card:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: rgba(124,92,252,0.04);
+    }
+
+    .add-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px dashed currentColor;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+    }
+
+    /* ===== MODAL DE CRIAR APP ===== */
+    .modal-form { display: flex; flex-direction: column; gap: 20px; }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <a href="index.html" class="sidebar-logo">
+        <span class="logo-icon">⚡</span>
+        Zploy
+      </a>
+
+      <span class="sidebar-section-label">Plataforma</span>
+      <a class="sidebar-link active" href="dashboard.html">
+        <span class="icon">🏠</span> Dashboard
+      </a>
+
+      <div class="sidebar-bottom">
+        <div class="sidebar-link" onclick="Auth.logout()">
+          <span class="icon">🚪</span> Sair
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <div class="page-header">
+        <div class="flex justify-between items-start flex-wrap gap-16">
+          <div>
+            <h1 class="page-title fade-in-up">Meus Apps</h1>
+            <p class="page-subtitle fade-in-up fade-in-up-delay-1">Gerencie suas aplicações e deploys.</p>
+          </div>
+          <button class="btn btn-primary fade-in-up fade-in-up-delay-2" onclick="openModal()">
+            + Novo App
+          </button>
+        </div>
+      </div>
+
+      <div class="page-content">
+        <div class="apps-grid" id="apps-grid">
+          <!-- skeleton enquanto carrega -->
+          <div class="skeleton" style="height:160px;border-radius:var(--radius)"></div>
+          <div class="skeleton" style="height:160px;border-radius:var(--radius)"></div>
+          <div class="skeleton" style="height:160px;border-radius:var(--radius)"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL CRIAR APP -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeModalOnOverlay(event)">
+    <div class="modal">
+      <h2 class="modal-title">Novo App 🚀</h2>
+      <p class="modal-subtitle">Dê um nome único para a sua aplicação. Você poderá configurar o deploy na próxima tela.</p>
+      <div class="modal-form">
+        <div class="field">
+          <label class="label" for="app-name">Nome do App</label>
+          <input class="input" type="text" id="app-name" placeholder="ex: minha-api-node" autofocus>
+          <span style="font-size:0.78rem;color:var(--text-muted)">Use apenas letras minúsculas, números e hífens.</span>
+        </div>
+        <div id="create-error" class="error-msg"></div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+          <button class="btn btn-primary" id="btn-create" onclick="createApp()">Criar App</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .error-msg {
+      background: var(--danger-surface);
+      border: 1px solid rgba(255,74,110,0.3);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 0.88rem;
+      color: var(--danger);
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+    .loading {
+      display: inline-block; width:14px; height:14px;
+      border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+
+  <script src="js/api.js"></script>
+  <script>
+    requireAuth();
+
+    async function loadApps() {
+      const grid = document.getElementById('apps-grid');
+      const { ok, data } = await Apps.list();
+
+      if (!ok || !Array.isArray(data)) {
+        grid.innerHTML = `<div class="empty-state"><span class="empty-icon">⚠️</span><p class="empty-title">Erro ao carregar apps</p></div>`;
+        return;
+      }
+
+      let html = '';
+
+      if (data.length === 0) {
+        html = `
+          <div class="add-app-card" onclick="openModal()">
+            <div class="add-icon">+</div>
+            <div style="font-weight:600;font-size:0.95rem;">Criar primeiro App</div>
+            <div style="font-size:0.85rem;">Clique para começar</div>
+          </div>`;
+      } else {
+        html = data.map(app => {
+          const initials = app.name.slice(0,2).toUpperCase();
+          return `
+            <a href="app.html?id=${app.id}" class="app-card fade-in-up">
+              <div class="app-card-top">
+                <div class="flex items-center gap-12">
+                  <div class="app-icon">${initials}</div>
+                  <div>
+                    <div class="app-card-name">${escHtml(app.name)}</div>
+                    <div class="app-card-url">${escHtml(app.url || '')}</div>
+                  </div>
+                </div>
+                ${statusBadge(app.status)}
+              </div>
+              <div class="app-card-footer">
+                <span>Criado em ${formatDate(app.createdAt)}</span>
+                <span style="color:var(--primary);font-weight:600;">Ver →</span>
+              </div>
+            </a>`;
+        }).join('') + `
+          <div class="add-app-card" onclick="openModal()">
+            <div class="add-icon">+</div>
+            <div style="font-weight:600;font-size:0.95rem;">Novo App</div>
+          </div>`;
+      }
+
+      grid.innerHTML = html;
+    }
+
+    function escHtml(v) {
+      return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function openModal() {
+      document.getElementById('modal-overlay').classList.add('active');
+      document.getElementById('app-name').focus();
+    }
+
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.remove('active');
+      document.getElementById('create-error').classList.remove('visible');
+      document.getElementById('app-name').value = '';
+    }
+
+    function closeModalOnOverlay(e) {
+      if (e.target === document.getElementById('modal-overlay')) closeModal();
+    }
+
+    async function createApp() {
+      const name = document.getElementById('app-name').value.trim();
+      const btn = document.getElementById('btn-create');
+      const errEl = document.getElementById('create-error');
+
+      if (!name) {
+        errEl.textContent = 'Informe o nome do App.';
+        errEl.classList.add('visible');
+        return;
+      }
+
+      btn.innerHTML = '<span class="loading"></span> Criando...';
+      btn.disabled = true;
+      errEl.classList.remove('visible');
+
+      const { ok, data } = await Apps.create(name);
+
+      if (ok && data.id) {
+        closeModal();
+        window.location.href = `app.html?id=${data.id}`;
+      } else {
+        errEl.textContent = data?.error || 'Erro ao criar app.';
+        errEl.classList.add('visible');
+        btn.innerHTML = 'Criar App';
+        btn.disabled = false;
+      }
+    }
+
+    document.getElementById('app-name').addEventListener('keydown', e => {
+      if (e.key === 'Enter') createApp();
+    });
+
+    loadApps();
+  </script>
+</body>
+</html>
