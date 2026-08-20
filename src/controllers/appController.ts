@@ -31,7 +31,7 @@ export async function create(req: AuthRequest, res: Response) {
     // 2. Retorna o erro real ou uma mensagem mais informativa para o usuário
     res.status(400).json({ 
         error: 'Erro ao criar app.', 
-        details: error.message || 'Erro desconhecido' 
+        details: (error as Error).message || 'Erro desconhecido' 
     });
   }
 }

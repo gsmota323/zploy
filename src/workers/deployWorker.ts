@@ -1,7 +1,7 @@
 import { Worker, Job } from "bullmq";
 import { redisConnection } from "../config/redis";
 import { promisify } from "util";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import fs from "fs";
 import path from "path";
 import { PrismaClient } from "@prisma/client";
@@ -10,7 +10,7 @@ import { runCommandWithLogs } from "../utils/runCommandWithLogs";
 import { deployToKubernetes } from "../utils/kubernetes";
 import { inferContainerPort, resolveDockerfileContent } from "../utils/dockerfile";
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const prisma = new PrismaClient();
 
 export const worker = new Worker(
@@ -99,10 +99,15 @@ export const worker = new Worker(
         message: "Baixando código do repositório.",
       });
 
-      const cloneArgs = targetBranch && targetBranch !== "main"
-        ? ["clone", "--branch", targetBranch, "--single-branch", repositoryUrl, tempDeployDir]
-        : ["clone", repositoryUrl, tempDeployDir];
-
+      const cloneArgs = [
+        "clone",
+        "--branch",
+        targetBranch,
+        "--single-branch",
+        repositoryUrl,
+        tempDeployDir,
+      ];
+      
       await runCommandWithLogs({
         command: "git",
         args: cloneArgs,
@@ -297,7 +302,11 @@ export const worker = new Worker(
         console.log(`[Worker] Porta interna: ${containerPort}`);
 
         try {
-          await execAsync(`docker rm -f ${containerName}`);
+          await execFileAsync("docker", [
+            "rm",
+            "-f",
+            containerName,
+          ]);
           console.log(`[Worker] Container anterior removido: ${containerName}`);
 
           await createDeployLog({
