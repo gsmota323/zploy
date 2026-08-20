@@ -22,11 +22,13 @@ function isAuthEnabled() {
 app.use(cors());
 app.use(
   express.json({
-    verify: (req, _res, buf) => {
-      if (req.originalUrl === "/webhooks/github") {
-        (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
-      }
-    },
+   verify: (req, _res, buf) => {
+  const expressReq = req as express.Request & { rawBody?: Buffer };
+
+  if (expressReq.originalUrl === "/webhooks/github") {
+    expressReq.rawBody = Buffer.from(buf);
+  }
+},
   })
 );
 
