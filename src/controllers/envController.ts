@@ -45,7 +45,7 @@ export async function remove(req: AuthRequest, res: Response) {
     const envId = String(req.params.envId); 
     
     await checkAppOwnership(appId, String(req.userId));
-    await deleteEnv(envId);
+    await deleteEnv(envId, appId);
     
     res.json({ message: 'Variável de ambiente eliminada com sucesso.' });
   } catch (error: any) {

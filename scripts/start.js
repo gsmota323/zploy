@@ -1,4 +1,4 @@
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
@@ -20,6 +20,19 @@ function run(command, args, name) {
   return child;
 }
 
+function runStep(command, args, name) {
+  const result = spawnSync(command, args, {
+    cwd: root,
+    stdio: 'inherit',
+    shell: true,
+    env: process.env,
+  });
+
+  if (result.status !== 0) {
+    throw new Error(`[${name}] falhou com código ${result.status}`);
+  }
+}
+
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -30,6 +43,12 @@ async function main() {
 
   console.log('Aguardando os serviços ficarem prontos...');
   await wait(8000);
+
+  console.log('Sincronizando banco de dados...');
+  runStep('npx', ['prisma', 'migrate', 'deploy'], 'prisma-migrate-deploy');
+
+  console.log('Garantindo dados iniciais...');
+  runStep('npx', ['prisma', 'db', 'seed'], 'prisma-seed');
 
   console.log('Iniciando Zploy...');
   console.log('API + Worker');

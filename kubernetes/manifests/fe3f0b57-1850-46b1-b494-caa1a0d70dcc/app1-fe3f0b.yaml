@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app1-fe3f0b
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app1-fe3f0b
+  template:
+    metadata:
+      labels:
+        app: app1-fe3f0b
+    spec:
+      containers:
+        - name: app1-fe3f0b
+          image: zploy-app-fe3f0b57-1850-46b1-b494-caa1a0d70dcc
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5006
+          resources:
+            requests:
+              cpu: "100m"
+            limits:
+              cpu: "500m"
+          env:
+            - name: PORT
+              value: "5006"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app1-fe3f0b
+  namespace: default
+spec:
+  selector:
+    app: app1-fe3f0b
+  ports:
+    - port: 80
+      targetPort: 5006
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: app1-fe3f0b
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: app1-fe3f0b
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app1-fe3f0b
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - host: app1.zploy.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app1-fe3f0b
+                port:
+                  number: 80

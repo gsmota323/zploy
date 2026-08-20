@@ -33,6 +33,7 @@ Define as dependências do projeto, os scripts de execução e as ferramentas ut
 - npm run dev: inicia a API
 - npm run worker: inicia o worker de deploy
 - npm run prisma:migrate: executa as migrations do Prisma
+- npm run k8s:expose: expõe o Ingress do Kubernetes localmente em `localhost:8080` para testes e apresentação
 
 ### [docker-compose.yml](docker-compose.yml)
 Configura os serviços locais necessários para o projeto funcionar:
@@ -256,6 +257,8 @@ Executa comandos do terminal e salva a saída em logs de deploy.
 Responsável pela integração com Kubernetes.
 
 Ele gera manifests YAML, aplica no cluster, faz rollback e ajuda na análise de saúde do deployment.
+
+Também define o domínio de Ingress da aplicação (variável `KUBERNETES_INGRESS_DOMAIN`, padrão `localtest.me`), facilitando acesso local em Windows sem editar o arquivo hosts.
 
 ---
 

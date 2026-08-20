@@ -337,6 +337,7 @@
       } else {
         html = apps.map(app => {
           const initials = app.name.slice(0,2).toUpperCase();
+          const displayUrl = resolveDashboardAppUrl(app.url || '');
           return `
             <a href="app.html?id=${app.id}" class="app-card fade-in-up">
               <div class="app-card-top">
@@ -344,7 +345,7 @@
                   <div class="app-icon">${initials}</div>
                   <div>
                     <div class="app-card-name">${escHtml(app.name)}</div>
-                    <div class="app-card-url">${escHtml(app.url || '')}</div>
+                    <div class="app-card-url">${escHtml(displayUrl)}</div>
                   </div>
                 </div>
                 ${statusBadge(app.status)}
@@ -366,6 +367,23 @@
 
     function escHtml(v) {
       return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function resolveDashboardAppUrl(rawUrl) {
+      if (!rawUrl) return '';
+
+      try {
+        const parsed = new URL(rawUrl);
+        if (!parsed.hostname.endsWith('.localtest.me') || parsed.port) {
+          return rawUrl;
+        }
+
+        const rememberedPort = window.localStorage.getItem('zployExposePort') || '8080';
+        parsed.port = rememberedPort;
+        return parsed.toString().replace(/\/$/, '');
+      } catch {
+        return rawUrl;
+      }
     }
 
     function openModal() {

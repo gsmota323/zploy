@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodebb-k8s-test-12a440
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodebb-k8s-test-12a440
+  template:
+    metadata:
+      labels:
+        app: nodebb-k8s-test-12a440
+    spec:
+      containers:
+        - name: nodebb-k8s-test-12a440
+          image: zploy-app-12a44001-7b9f-4a33-bec1-ee2afc443443
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4567
+          resources:
+            requests:
+              cpu: "100m"
+            limits:
+              cpu: "500m"
+          env:
+            - name: PORT
+              value: "4567"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodebb-k8s-test-12a440
+  namespace: default
+spec:
+  selector:
+    app: nodebb-k8s-test-12a440
+  ports:
+    - port: 80
+      targetPort: 4567
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nodebb-k8s-test-12a440
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nodebb-k8s-test-12a440
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nodebb-k8s-test-12a440
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - host: nodebb-k8s-test.zploy.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nodebb-k8s-test-12a440
+                port:
+                  number: 80

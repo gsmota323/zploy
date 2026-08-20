@@ -42,8 +42,18 @@ function slugify(value: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-export function resolveNamespace(namespace?: string) {
-  return namespace || process.env.KUBERNETES_NAMESPACE || "default";
+function resolveIngressDomain() {
+  const configuredDomain = process.env.KUBERNETES_INGRESS_DOMAIN?.trim();
+  return configuredDomain || "localtest.me";
+}
+
+function buildIngressHost(appName: string, appId: string) {
+  const uniqueSuffix = appId.slice(0, 6).toLowerCase();
+  return `${slugify(appName)}-${uniqueSuffix}.${resolveIngressDomain()}`;
+}
+
+export function resolveNamespace() {
+  return process.env.KUBERNETES_NAMESPACE || "default";
 }
 
 export function resolveAutoscalingConfig({
@@ -56,19 +66,47 @@ export function resolveAutoscalingConfig({
   targetCPUUtilizationPercentage?: number;
 } = {}) {
   const resolvedMinReplicas = Number(
-    minReplicas ?? Number(process.env.KUBERNETES_MIN_REPLICAS ?? 1)
-  );
-  const resolvedMaxReplicas = Number(
-    maxReplicas ?? Number(process.env.KUBERNETES_MAX_REPLICAS ?? 3)
-  );
-  const resolvedTargetCPU = Number(
-    targetCPUUtilizationPercentage ?? Number(process.env.KUBERNETES_CPU_TARGET ?? 70)
+    minReplicas ?? process.env.KUBERNETES_MIN_REPLICAS ?? 1
   );
 
+  const resolvedMaxReplicas = Number(
+    maxReplicas ?? process.env.KUBERNETES_MAX_REPLICAS ?? 3
+  );
+
+  const resolvedTargetCPU = Number(
+    targetCPUUtilizationPercentage ??
+      process.env.KUBERNETES_CPU_TARGET ??
+      70
+  );
+
+  if (!Number.isInteger(resolvedMinReplicas) || resolvedMinReplicas < 1) {
+    throw new Error("minReplicas deve ser um inteiro maior ou igual a 1.");
+  }
+
+  if (!Number.isInteger(resolvedMaxReplicas) || resolvedMaxReplicas < 1) {
+    throw new Error("maxReplicas deve ser um inteiro maior ou igual a 1.");
+  }
+
+  if (resolvedMaxReplicas < resolvedMinReplicas) {
+    throw new Error(
+      "maxReplicas deve ser maior ou igual a minReplicas."
+    );
+  }
+
+  if (
+    !Number.isInteger(resolvedTargetCPU) ||
+    resolvedTargetCPU < 1 ||
+    resolvedTargetCPU > 100
+  ) {
+    throw new Error(
+      "targetCPUUtilizationPercentage deve estar entre 1 e 100."
+    );
+  }
+
   return {
-    minReplicas: Number.isFinite(resolvedMinReplicas) ? resolvedMinReplicas : 1,
-    maxReplicas: Number.isFinite(resolvedMaxReplicas) ? resolvedMaxReplicas : 3,
-    targetCPUUtilizationPercentage: Number.isFinite(resolvedTargetCPU) ? resolvedTargetCPU : 70,
+    minReplicas: resolvedMinReplicas,
+    maxReplicas: resolvedMaxReplicas,
+    targetCPUUtilizationPercentage: resolvedTargetCPU,
   };
 }
 
@@ -243,7 +281,7 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   rules:
-    - host: ${slugify(appName)}.zploy.localhost
+    - host: ${buildIngressHost(appName, appId)}
       http:
         paths:
           - path: /
@@ -263,7 +301,6 @@ export async function deployToKubernetes({
   containerPort,
   envVars,
   deployId,
-  namespace,
   minReplicas,
   maxReplicas,
   targetCPUUtilizationPercentage,
@@ -274,13 +311,22 @@ export async function deployToKubernetes({
   containerPort: number;
   envVars: KubernetesEnvVar[];
   deployId: string;
-  namespace?: string;
   minReplicas?: number;
   maxReplicas?: number;
   targetCPUUtilizationPercentage?: number;
 }): Promise<KubernetesDeploymentResult> {
+  if (
+    !Number.isInteger(containerPort) ||
+    containerPort < 1 ||
+    containerPort > 65535
+  ) {
+    throw new Error(
+      "containerPort deve estar entre 1 e 65535."
+    );
+  }
+
   const deploymentName = buildDeploymentName(appName, appId);
-  const resolvedNamespace = resolveNamespace(namespace);
+  const resolvedNamespace = resolveNamespace();
   const manifestDir = path.join(process.cwd(), "kubernetes", "manifests", appId);
 
   fs.mkdirSync(manifestDir, { recursive: true });
@@ -308,6 +354,34 @@ export async function deployToKubernetes({
       message: `Publicando o manifest do Kubernetes em ${manifestPath} no namespace ${resolvedNamespace}`,
     });
 
+    try {
+      await createDeployLog({
+        deployId,
+        type: "runtime",
+        level: "info",
+        message: `Carregando imagem ${imageName} no Minikube...`,
+      });
+
+      await execFileAsync("minikube", ["image", "load", imageName], {
+        env: process.env,
+      });
+
+      await createDeployLog({
+        deployId,
+        type: "runtime",
+        level: "info",
+        message: `Imagem ${imageName} carregada no Minikube com sucesso.`,
+      });
+    } catch {
+      await createDeployLog({
+        deployId,
+        type: "runtime",
+        level: "info",
+        message:
+          "Não foi possível carregar imagem via minikube image load. Prosseguindo com kubectl apply.",
+      });
+    }
+
     await execFileAsync("kubectl", ["apply", "-f", manifestPath], {
       env: process.env,
     });
@@ -330,7 +404,7 @@ export async function deployToKubernetes({
       }
     );
 
-    const url = `http://${slugify(appName)}.zploy.localhost`;
+    const url = `http://${buildIngressHost(appName, appId)}`;
 
     return {
       url,
@@ -345,7 +419,7 @@ export async function deployToKubernetes({
 }
 
 export async function rollbackKubernetesDeployment(deploymentName: string, namespace: string): Promise<string> {
-  const resolvedNamespace = resolveNamespace(namespace);
+  const resolvedNamespace = resolveNamespace();
   
   try {
     const result = await execFileAsync("kubectl", ["rollout", "undo", `deployment/${deploymentName}`, "-n", resolvedNamespace], {

@@ -181,7 +181,11 @@ const Apps = {
   list: () => api('GET', '/apps'),
   create: (name) => api('POST', '/apps', { name }),
   delete: (id) => api('DELETE', `/apps/${id}`),
-  deploy: (id, repositoryUrl) => api('POST', `/apps/${id}/deploy`, { repositoryUrl }),
+  deploy: (id, repositoryUrl, dockerfile) =>
+    api('POST', `/apps/${id}/deploy`, {
+      repositoryUrl,
+      ...(dockerfile ? { dockerfile } : {}),
+    }),
   stop: (id) => api('POST', `/apps/${id}/stop`),
 };
 

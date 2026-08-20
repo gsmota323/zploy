@@ -28,9 +28,15 @@ export function normalizeRepositoryUrl(value?: string | null) {
   return normalized;
 }
 
-export function verifyGithubSignature(payload: string, signature?: string | string[]) {
+export function verifyGithubSignature(
+  payload: Buffer,
+  signature?: string | string[]
+) {
   const secret = process.env.GITHUB_WEBHOOK_SECRET;
-  if (!secret) return true;
+  if (!secret) {
+  return false;
+  
+}
 
   const providedSignature = Array.isArray(signature) ? signature[0] : signature;
   if (!providedSignature) return false;

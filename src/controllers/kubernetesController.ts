@@ -114,7 +114,7 @@ async function getPodInfo(app: { id: string; name: string; userId: string }, nam
 export async function getPodLogs(req: AuthRequest, res: Response) {
   try {
     const { appId } = req.params;
-    const namespace = resolveNamespace(req.query.namespace as string | undefined);
+    const namespace = resolveNamespace();
     const userId = req.userId;
     const tail = normalizeTail(req.query.tail as string | undefined);
 
@@ -186,7 +186,7 @@ export async function getPodLogs(req: AuthRequest, res: Response) {
 export async function getPodStatus(req: AuthRequest, res: Response) {
   try {
     const { appId } = req.params;
-    const namespace = resolveNamespace(req.query.namespace as string | undefined);
+    const namespace = resolveNamespace();
     const userId = req.userId;
 
     if (!appId) {
@@ -246,7 +246,7 @@ export async function getPodStatus(req: AuthRequest, res: Response) {
 export async function rollbackDeployment(req: AuthRequest, res: Response) {
   try {
     const { appId } = req.params;
-    const namespace = resolveNamespace(req.query.namespace as string | undefined);
+    const namespace = resolveNamespace();
     const userId = req.userId;
 
     if (!appId) {

@@ -28,6 +28,23 @@ export const worker = new Worker(
       throw new Error("Payload inválido: appId, repositoryUrl ou deployId ausente.");
     }
 
+    const deployRecord = await prisma.deploy.findUnique({
+      where: { id: deployId },
+      select: { id: true, appId: true },
+    });
+
+    if (!deployRecord) {
+      console.warn(`[Worker] Job ${job.id} ignorado: deploy ${deployId} não existe mais.`);
+      return { status: "skipped", reason: "deploy-not-found" };
+    }
+
+    if (deployRecord.appId !== appId) {
+      console.warn(
+        `[Worker] Job ${job.id} ignorado: deploy ${deployId} pertence a outro app.`
+      );
+      return { status: "skipped", reason: "deploy-app-mismatch" };
+    }
+
     const tempDeployDir = path.join(__dirname, "..", "..", "temp-deploys", appId);
 
     const app = await prisma.app.findUnique({ where: { id: appId } });
@@ -111,6 +128,11 @@ export const worker = new Worker(
 
       const hasPackageJson = fs.existsSync(path.join(tempDeployDir, "package.json"));
       const hasRequirementsTxt = fs.existsSync(path.join(tempDeployDir, "requirements.txt"));
+      const dockerfilePathInRepo = path.join(tempDeployDir, "Dockerfile");
+      const hasRepositoryDockerfile = fs.existsSync(dockerfilePathInRepo);
+      const repositoryDockerfileContent = hasRepositoryDockerfile
+        ? fs.readFileSync(dockerfilePathInRepo, { encoding: "utf-8" })
+        : undefined;
 
       if (hasPackageJson) {
         runtime = "Node";
@@ -130,15 +152,43 @@ export const worker = new Worker(
           level: "info",
           message: "Projeto Python detectado.",
         });
+      } else if (repositoryDockerfileContent) {
+        runtime = repositoryDockerfileContent.toLowerCase().includes("python") ? "Python" : "Node";
+
+        await createDeployLog({
+          deployId,
+          type: "build",
+          level: "info",
+          message: "Projeto sem package.json/requirements.txt, usando Dockerfile do repositório.",
+        });
       } else {
         throw new Error(
           "Não foi possível identificar a tecnologia do projeto. Envie um projeto Node.js com package.json ou Python com requirements.txt."
         );
       }
 
+      const customDockerfileInput = dockerfile?.trim();
+      const shouldUseRepositoryDockerfile = !customDockerfileInput && Boolean(repositoryDockerfileContent);
+
+      if (customDockerfileInput) {
+        await createDeployLog({
+          deployId,
+          type: "build",
+          level: "info",
+          message: "Usando Dockerfile customizado informado no deploy.",
+        });
+      } else if (shouldUseRepositoryDockerfile) {
+        await createDeployLog({
+          deployId,
+          type: "build",
+          level: "info",
+          message: "Dockerfile encontrado no repositório. Usando este arquivo para build.",
+        });
+      }
+
       const dockerfileContent = resolveDockerfileContent({
         runtime,
-        customDockerfile: dockerfile,
+        customDockerfile: customDockerfileInput || repositoryDockerfileContent,
       });
       const containerPort = inferContainerPort(dockerfileContent, runtime);
 

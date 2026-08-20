@@ -27,8 +27,21 @@ export async function listEnvs(appId: string) {
   });
 }
 
-export async function deleteEnv(envId: string) {
+export async function deleteEnv(envId: string, appId: string) {
+  const env = await prisma.envVar.findFirst({
+    where: {
+      id: envId,
+      appId,
+    },
+  });
+
+  if (!env) {
+    throw new Error("Variável de ambiente não encontrada.");
+  }
+
   return await prisma.envVar.delete({
-    where: { id: envId }
+    where: {
+      id: envId,
+    },
   });
 }

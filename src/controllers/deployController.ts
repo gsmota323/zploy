@@ -3,12 +3,15 @@ import { PrismaClient } from "@prisma/client";
 import { addDeployJob } from "../queues/deployQueue";
 import { createDeployLog, getDeployLogs } from "../services/deployLogService";
 import { AuthRequest } from "../middlewares/authMiddleware";
-import { exec } from "child_process";
+import { exec, execFile } from "node:child_process";
 import { promisify } from "util";
+
+
 
 const prisma = new PrismaClient();
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export async function startDeploy(req: AuthRequest, res: Response) {
   try {
@@ -177,7 +180,11 @@ export async function stopApp(req: AuthRequest, res: Response) {
     });
 
     try {
-      await execAsync(`docker rm -f ${containerName}`);
+      await execFileAsync("docker", [
+        "rm",
+        "-f",
+        containerName,
+      ]);
 
       if (lastDeploy) {
         await createDeployLog({

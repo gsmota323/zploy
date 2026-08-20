@@ -89,10 +89,30 @@ npx prisma migrate dev
 
 ## Execução
 
-A forma mais simples de rodar o projeto agora é com um único comando:
+A forma mais simples de operar o projeto agora é com comandos padronizados de subir e descer:
 
 ```bash
-npm run start
+npm run up
+npm run down
+```
+
+Resumo dos comandos simplificados:
+
+- `npm run up`: sobe modo local padrão (API + worker + postgres + redis)
+- `npm run down`: encerra modo local padrão
+- `npm run up:k8s`: sobe modo Kubernetes obrigatório
+- `npm run down:k8s`: encerra modo Kubernetes e para o Minikube
+- `npm run up:demo`: sobe modo demo totalmente em containers
+- `npm run down:demo`: encerra modo demo e limpa os containers da demo
+
+Compatibilidade: os comandos antigos (`start`, `start:k8s`, `demo:up`, etc.) continuam funcionando.
+
+### Modo local padrão
+
+Para subir:
+
+```bash
+npm run up
 ```
 
 Esse comando irá:
@@ -119,7 +139,7 @@ npm run worker
 Para subir o Minikube automaticamente e iniciar a plataforma exigindo Kubernetes:
 
 ```bash
-npm run start:k8s
+npm run up:k8s
 ```
 
 Esse comando:
@@ -127,6 +147,29 @@ Esse comando:
 - roda `minikube start`
 - habilita addons `ingress` e `metrics-server`
 - inicia o Zploy com `REQUIRE_KUBERNETES=true`
+
+Para acessar apps publicados no Kubernetes de forma estável no Windows (driver Docker), rode em outro terminal:
+
+```bash
+npm run k8s:expose
+```
+
+Esse comando mantém o `kubectl port-forward` com reconexão automática se a sessão cair.
+Se a porta `8080` estiver ocupada, ele seleciona automaticamente a próxima porta livre e mostra a URL no terminal.
+
+Depois, abra a aplicação em:
+
+```bash
+http://<nome-do-app>.localtest.me:8080
+```
+
+Exemplo:
+
+```bash
+http://app1.localtest.me:8080
+```
+
+Observação: o domínio de ingress é configurável por `KUBERNETES_INGRESS_DOMAIN` e o padrão agora é `localtest.me`.
 
 ### Modos de uso
 
@@ -138,19 +181,13 @@ Esse comando:
 Para rodar API, worker, PostgreSQL e Redis em containers:
 
 ```bash
-npm run demo:up
+npm run up:demo
 ```
 
-Para parar os containers do modo demo (sem remover):
+Para encerrar o modo demo:
 
 ```bash
-npm run demo:down
-```
-
-Para remover containers e rede do modo demo:
-
-```bash
-npm run demo:clean
+npm run down:demo
 ```
 
 No modo demo, o backend fica disponível em:

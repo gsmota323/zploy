@@ -16,6 +16,22 @@ function runStep(command, args, name) {
   }
 }
 
+function runOptionalStep(command, args, name) {
+  const result = spawnSync(command, args, {
+    cwd: root,
+    stdio: 'inherit',
+    shell: true,
+    env: process.env,
+  });
+
+  if (result.status !== 0) {
+    console.warn(`\n[${name}] falhou com código ${result.status}. Continuando em modo degradado.`);
+    return false;
+  }
+
+  return true;
+}
+
 function run(command, args, name, env = process.env) {
   const child = spawn(command, args, {
     cwd: root,
@@ -40,7 +56,7 @@ async function main() {
 
   runStep('minikube', ['start'], 'minikube-start');
   runStep('minikube', ['addons', 'enable', 'ingress'], 'minikube-ingress');
-  runStep('minikube', ['addons', 'enable', 'metrics-server'], 'minikube-metrics');
+  runOptionalStep('minikube', ['addons', 'enable', 'metrics-server'], 'minikube-metrics');
 
   console.log('Iniciando API + Worker com Kubernetes obrigatório (sem fallback)...');
 

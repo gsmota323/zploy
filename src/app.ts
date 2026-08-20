@@ -20,7 +20,15 @@ function isAuthEnabled() {
 }
 
 app.use(cors());
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      if (req.originalUrl === "/webhooks/github") {
+        (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
+      }
+    },
+  })
+);
 
 // Serve o frontend estático
 app.use("/frontend", express.static(path.join(process.cwd(), "frontend")));
@@ -63,8 +71,18 @@ app.post("/webhooks/github", async (req, res) => {
       ? req.headers["x-hub-signature-256"][0]
       : req.headers["x-hub-signature-256"];
 
-    if (!verifyGithubSignature(JSON.stringify(req.body), signature)) {
-      return res.status(401).json({ error: "Assinatura do webhook inválida." });
+    const rawBody = (req as express.Request & { rawBody?: Buffer }).rawBody;
+
+    if (!rawBody) {
+      return res.status(400).json({
+        error: "Payload bruto do webhook não disponível.",
+      });
+    }
+
+    if (!verifyGithubSignature(rawBody, signature)) {
+      return res.status(401).json({
+        error: "Assinatura do webhook inválida.",
+      });
     }
 
     const repositoryUrl = getWebhookRepositoryUrl(req.body);
@@ -87,8 +105,12 @@ app.post("/webhooks/github", async (req, res) => {
     }
 
     const configuredBranch = (app as { deploymentBranch?: string }).deploymentBranch || "main";
-    if (configuredBranch !== "main" && configuredBranch !== branch) {
-      return res.status(202).json({ ok: true, ignored: true, reason: "branch-mismatch" });
+    if (configuredBranch !== branch) {
+      return res.status(202).json({
+        ok: true,
+        ignored: true,
+        reason: "branch-mismatch",
+      });
     }
 
     const newDeploy = await prisma.deploy.create({
