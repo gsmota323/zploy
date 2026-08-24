@@ -4,14 +4,13 @@ import { promisify } from "util";
 import { execFile } from "child_process";
 import fs from "fs";
 import path from "path";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../config/prisma";
 import { createDeployLog } from "../services/deployLogService";
 import { runCommandWithLogs } from "../utils/runCommandWithLogs";
 import { deployToKubernetes } from "../utils/kubernetes";
 import { inferContainerPort, resolveDockerfileContent } from "../utils/dockerfile";
 
 const execFileAsync = promisify(execFile);
-const prisma = new PrismaClient();
 
 export const worker = new Worker(
   "DeployQueue",
@@ -319,12 +318,6 @@ export const worker = new Worker(
         } catch {
           console.log(`[Worker] Nenhum container anterior encontrado: ${containerName}`);
         }
-
-            try {
-        await execFileAsync("docker", ["rm", "-f", containerName]);
-    } catch (error) {
-        // Ignora se o container não existir (ex: primeiro deploy)
-    }
 
         await runCommandWithLogs({
           command: "docker",

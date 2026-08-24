@@ -250,7 +250,7 @@ spec:
   ports:
     - port: 80
       targetPort: ${containerPort}
-  type: NodePort
+  type: ClusterIP
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -394,16 +394,6 @@ export async function deployToKubernetes({
       }
     );
 
-    // Continuamos pegando o NodePort apenas para histórico/debug se necessário,
-    // mas a URL oficial da aplicação agora é gerenciada pelo Ingress!
-    const nodePortOutput = await execFileAsync(
-      "kubectl",
-      ["get", "service", deploymentName, "-n", resolvedNamespace, "-o", "jsonpath={.spec.ports[0].nodePort}"],
-      {
-        env: process.env,
-      }
-    );
-
     const url = `http://${buildIngressHost(appName, appId)}`;
 
     return {
@@ -418,11 +408,11 @@ export async function deployToKubernetes({
   }
 }
 
-export async function rollbackKubernetesDeployment(deploymentName: string, namespace: string): Promise<string> {
-  const resolvedNamespace = resolveNamespace();
+export async function rollbackKubernetesDeployment(deploymentName: string, namespace?: string): Promise<string> {
+  const targetNamespace = namespace || resolveNamespace();
   
   try {
-    const result = await execFileAsync("kubectl", ["rollout", "undo", `deployment/${deploymentName}`, "-n", resolvedNamespace], {
+    const result = await execFileAsync("kubectl", ["rollout", "undo", `deployment/${deploymentName}`, "-n", targetNamespace], {
       env: process.env,
     });
     return result.stdout.trim();
