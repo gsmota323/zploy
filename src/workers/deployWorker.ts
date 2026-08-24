@@ -7,8 +7,12 @@ import path from "path";
 import prisma from "../config/prisma";
 import { createDeployLog } from "../services/deployLogService";
 import { runCommandWithLogs } from "../utils/runCommandWithLogs";
-import { deployToKubernetes } from "../utils/kubernetes";
 import { inferContainerPort, resolveDockerfileContent } from "../utils/dockerfile";
+
+// --- NOVOS IMPORTS DA ARQUITETURA ---
+import { DockerProvider } from "../services/deployment/dockerProvider";
+import { KubernetesProvider } from "../services/deployment/kubernetesProvider";
+import { DeploymentConfig } from "../services/deployment/deploymentProvider";
 
 const execFileAsync = promisify(execFile);
 
@@ -249,37 +253,35 @@ export const worker = new Worker(
         message: "Iniciando aplicação.",
       });
 
-      const envVars = await prisma.envVar.findMany({
-        where: { appId },
-      });
-
-      let appUrl = "";
-      let deploymentSucceeded = false;
-      let hostPort = 0;
+      // ---------------------------------------------------------
+      // FASE DE DEPLOY (A MÁGICA DA ARQUITETURA ACONTECE AQUI)
+      // ---------------------------------------------------------
+      const envVars = await prisma.envVar.findMany({ where: { appId } });
       const requireKubernetes = process.env.REQUIRE_KUBERNETES === "true";
+      
+      const deployConfig: DeploymentConfig = {
+        appId,
+        appName: app?.name || "app",
+        imageName,
+        containerPort,
+        deployId,
+        envVars: envVars.map(e => ({ key: e.key, value: e.value })),
+        minReplicas: app?.minReplicas ?? Number(process.env.KUBERNETES_MIN_REPLICAS ?? 1),
+        maxReplicas: app?.maxReplicas ?? Number(process.env.KUBERNETES_MAX_REPLICAS ?? 3),
+        targetCPUUtilizationPercentage: app?.targetCPUUtilizationPercentage ?? Number(process.env.KUBERNETES_CPU_TARGET ?? 70),
+      };
+
+      let deployResult;
 
       try {
-        const k8sResult = await deployToKubernetes({
-          appId,
-          appName: app?.name || "app",
-          imageName,
-          containerPort,
-          envVars: envVars.map((envVar) => ({ key: envVar.key, value: envVar.value })),
-          deployId,
-          minReplicas: app?.minReplicas ?? Number(process.env.KUBERNETES_MIN_REPLICAS ?? 1),
-          maxReplicas: app?.maxReplicas ?? Number(process.env.KUBERNETES_MAX_REPLICAS ?? 3),
-          targetCPUUtilizationPercentage:
-            app?.targetCPUUtilizationPercentage ?? Number(process.env.KUBERNETES_CPU_TARGET ?? 70),
-        });
-
-        appUrl = k8sResult.url || "http://127.0.0.1";
-        deploymentSucceeded = true;
-
+        const k8sProvider = new KubernetesProvider();
+        deployResult = await k8sProvider.deploy(deployConfig);
+        
         await createDeployLog({
           deployId,
           type: "runtime",
           level: "info",
-          message: `Aplicação publicada no Kubernetes: ${appUrl}`,
+          message: `Aplicação publicada no Kubernetes: ${deployResult.url}`,
         });
       } catch (k8sError) {
         if (requireKubernetes) {
@@ -287,72 +289,28 @@ export const worker = new Worker(
           throw new Error(`Kubernetes obrigatório, mas indisponível: ${reason}`);
         }
 
-        console.warn("[Worker] Kubernetes indisponível, usando fallback com Docker:", k8sError);
-
-        const envArgs = envVars.flatMap((envVar) => [
-          "-e",
-          `${envVar.key}=${envVar.value}`,
-        ]);
-
-        hostPort = Math.floor(Math.random() * (40000 - 30000) + 30000);
-        const containerName = `zploy-${appId}`;
-
-        console.log(`[Worker] Container: ${containerName}`);
-        console.log(`[Worker] Porta externa: ${hostPort}`);
-        console.log(`[Worker] Porta interna: ${containerPort}`);
-
-        try {
-          await execFileAsync("docker", [
-            "rm",
-            "-f",
-            containerName,
-          ]);
-          console.log(`[Worker] Container anterior removido: ${containerName}`);
-
-          await createDeployLog({
-            deployId,
-            type: "runtime",
-            level: "info",
-            message: "Versão anterior da aplicação encerrada.",
-          });
-        } catch {
-          console.log(`[Worker] Nenhum container anterior encontrado: ${containerName}`);
-        }
-
-        await runCommandWithLogs({
-          command: "docker",
-          args: [
-            "run",
-            "-d",
-            ...envArgs,
-            "-e",
-            `PORT=${containerPort}`,
-            "-p",
-            `${hostPort}:${containerPort}`,
-            "--name",
-            containerName,
-            imageName,
-          ],
-          deployId,
-          type: "runtime",
-        });
-
-        appUrl = `http://localhost:${hostPort}`;
+        console.warn("[Worker] Kubernetes falhou/indisponível. Iniciando fallback via DockerProvider.", k8sError);
+        
+        const dockerProvider = new DockerProvider();
+        deployResult = await dockerProvider.deploy(deployConfig);
 
         await createDeployLog({
           deployId,
           type: "runtime",
           level: "info",
-          message: `Aplicação online em: ${appUrl}`,
+          message: `Aplicação online em Docker: ${deployResult.url}`,
         });
       }
 
+      // ---------------------------------------------------------
+      // ATUALIZAÇÃO DE STATUS E LIMPEZA
+      // ---------------------------------------------------------
       await prisma.app.update({
         where: { id: appId },
         data: {
-          url: appUrl,
+          url: deployResult.url,
           repositoryUrl,
-          status: deploymentSucceeded ? "running" : "running",
+          status: "running",
         },
       });
 
@@ -384,13 +342,13 @@ export const worker = new Worker(
       }
 
       console.log(`🚀 [Worker] Deploy concluído!`);
-      console.log(`🌐 [Worker] App online em: ${appUrl}`);
+      console.log(`🌐 [Worker] App online em: ${deployResult.url}`);
 
       return {
         status: "sucesso",
-        porta: hostPort,
-        runtime,
-        url: appUrl,
+        porta: deployResult.porta || 80, // O K8s pode não retornar porta, então usamos um padrão
+        runtime: deployResult.runtime,
+        url: deployResult.url,
       };
     } catch (error) {
       const errorMessage = (error as Error).message;
