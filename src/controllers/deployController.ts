@@ -218,7 +218,7 @@ export async function stopApp(req: AuthRequest, res: Response) {
       });
     }
 
-    const containerName = `container-${app.id}`;
+    const containerName = `zploy-${app.id}`;
 
     const lastDeploy = await prisma.deploy.findFirst({
       where: {

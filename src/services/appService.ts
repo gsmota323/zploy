@@ -1,7 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/prisma';
 import { normalizeRepositoryUrl } from '../utils/githubWebhook';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 
-const prisma = new PrismaClient();
+const execFileAsync = promisify(execFile);
 
 export async function createApp(
   name: string,
@@ -53,6 +55,18 @@ export async function deleteApp(appId: string, userId: string) {
   if (app.userId !== userId) {
     throw new Error('Acesso negado. Você não é o dono deste app.');
   }
+
+  // ---> NOVO: Limpeza de infraestrutura (Runtime) <---
+  const containerName = `zploy-${appId}`;
+  
+  try {
+    await execFileAsync("docker", ["rm", "-f", containerName]);
+    console.log(`[ZPLOY] Container ${containerName} removido com sucesso.`);
+  } catch (error) {
+    console.log(`[ZPLOY] Container ${containerName} não estava rodando no Docker. Seguindo...`);
+  }
+
+  // (No futuro, você pode adicionar aqui a limpeza do Kubernetes: kubectl delete all -l app=zploy-${appId})
 
   // 3. Deleta do banco
   return await prisma.app.delete({

@@ -4,7 +4,6 @@ const cors = require("cors");
 import userRoutes from "./routes/userRoutes";
 import authRoutes from "./routes/authRoutes"; 
 import appRoutes from "./routes/appRoutes";
-import './workers/deployWorker';
 import deployRoutes from "./routes/deployRoutes";
 import kubernetesRoutes from "./routes/kubernetesRoutes";
 import { PrismaClient } from "@prisma/client";

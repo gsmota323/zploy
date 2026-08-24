@@ -219,7 +219,8 @@ export const worker = new Worker(
         message: "Ambiente de execução preparado com sucesso.",
       });
 
-      const imageName = `zploy-app-${appId.toLowerCase()}`;
+      const imageTag = deployId.substring(0, 7); 
+      const imageName = `zploy-app-${appId.toLowerCase()}:${imageTag}`;
 
       await createDeployLog({
         deployId,
@@ -295,7 +296,7 @@ export const worker = new Worker(
         ]);
 
         hostPort = Math.floor(Math.random() * (40000 - 30000) + 30000);
-        const containerName = `zploy-${appId}-${deployId}`;
+        const containerName = `zploy-${appId}`;
 
         console.log(`[Worker] Container: ${containerName}`);
         console.log(`[Worker] Porta externa: ${hostPort}`);
@@ -318,6 +319,12 @@ export const worker = new Worker(
         } catch {
           console.log(`[Worker] Nenhum container anterior encontrado: ${containerName}`);
         }
+
+            try {
+        await execFileAsync("docker", ["rm", "-f", containerName]);
+    } catch (error) {
+        // Ignora se o container não existir (ex: primeiro deploy)
+    }
 
         await runCommandWithLogs({
           command: "docker",
