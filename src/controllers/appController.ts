@@ -10,6 +10,95 @@ const prisma = new PrismaClient();
 export async function create(req: AuthRequest, res: Response) {
   try {
     const { name, repositoryUrl, deploymentBranch, minReplicas, maxReplicas, targetCPUUtilizationPercentage } = req.body;
+
+        if (
+      typeof name !== "string" ||
+      name.trim().length < 1 ||
+      name.trim().length > 50 ||
+      !/^[a-zA-Z0-9_-]+$/.test(name)
+    ) {
+      return res.status(400).json({
+        error: "Nome do app inválido.",
+      });
+    }
+
+        if (
+      repositoryUrl !== undefined &&
+      repositoryUrl !== null &&
+      (
+        typeof repositoryUrl !== "string" ||
+        repositoryUrl.length > 500
+      )
+    ) {
+      return res.status(400).json({
+        error: "repositoryUrl inválida.",
+      });
+    }
+
+        if (
+      deploymentBranch !== undefined &&
+      deploymentBranch !== null &&
+      (
+        typeof deploymentBranch !== "string" ||
+        deploymentBranch.length < 1 ||
+        deploymentBranch.length > 100 ||
+        !/^[a-zA-Z0-9._/-]+$/.test(deploymentBranch)
+      )
+    ) {
+      return res.status(400).json({
+        error: "deploymentBranch inválida.",
+      });
+    }
+
+        if (
+      minReplicas !== undefined &&
+      (
+        !Number.isInteger(minReplicas) ||
+        minReplicas < 1 ||
+        minReplicas > 20
+      )
+    ) {
+      return res.status(400).json({
+        error: "minReplicas deve ser um número inteiro entre 1 e 20.",
+      });
+    }
+
+        if (
+      maxReplicas !== undefined &&
+      (
+        !Number.isInteger(maxReplicas) ||
+        maxReplicas < 1 ||
+        maxReplicas > 50
+      )
+    ) {
+      return res.status(400).json({
+        error: "maxReplicas deve ser um número inteiro entre 1 e 50.",
+      });
+    }
+
+            if (
+          minReplicas !== undefined &&
+          maxReplicas !== undefined &&
+          minReplicas > maxReplicas
+        ) {
+          return res.status(400).json({
+            error: "minReplicas não pode ser maior que maxReplicas.",
+          });
+        }
+
+        if (
+      targetCPUUtilizationPercentage !== undefined &&
+      (
+        !Number.isInteger(targetCPUUtilizationPercentage) ||
+        targetCPUUtilizationPercentage < 1 ||
+        targetCPUUtilizationPercentage > 100
+      )
+    ) {
+      return res.status(400).json({
+        error: "targetCPUUtilizationPercentage deve estar entre 1 e 100.",
+      });
+    }
+
     const userId = req.userId;
 
     if (!userId) {

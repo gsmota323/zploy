@@ -13,10 +13,60 @@ const prisma = new PrismaClient();
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 
+
+function isValidGithubRepositoryUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+
+    return (
+      url.protocol === "https:" &&
+      url.hostname === "github.com" &&
+      /^\/[^/]+\/[^/]+\/?$/.test(url.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function startDeploy(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
     const { repositoryUrl, dockerfile, deploymentBranch } = req.body;
+
+        if (
+      typeof repositoryUrl !== "string" ||
+      !isValidGithubRepositoryUrl(repositoryUrl)
+    ) {
+      return res.status(400).json({
+        error: "repositoryUrl deve ser um repositório GitHub válido.",
+      });
+    }
+
+        if (
+      deploymentBranch !== undefined &&
+      (
+        typeof deploymentBranch !== "string" ||
+        deploymentBranch.length < 1 ||
+        deploymentBranch.length > 100 ||
+        !/^[a-zA-Z0-9._/-]+$/.test(deploymentBranch)
+      )
+    ) {
+      return res.status(400).json({
+        error: "deploymentBranch inválida.",
+      });
+    }
+
+        if (
+      dockerfile !== undefined &&
+      (
+        typeof dockerfile !== "string" ||
+        dockerfile.length > 32_000
+      )
+    ) {
+      return res.status(400).json({
+        error: "Dockerfile inválido ou maior que 32 KB.",
+      });
+    }
 
     const userId = req.userId;
 

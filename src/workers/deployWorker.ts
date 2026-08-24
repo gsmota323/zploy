@@ -45,7 +45,7 @@ export const worker = new Worker(
       return { status: "skipped", reason: "deploy-app-mismatch" };
     }
 
-    const tempDeployDir = path.join(__dirname, "..", "..", "temp-deploys", appId);
+    const tempDeployDir = path.join(__dirname, "..", "..", "temp-deploys", deployId);
 
     const app = await prisma.app.findUnique({ where: { id: appId } });
     const targetBranch = branch || (app as { deploymentBranch?: string } | null)?.deploymentBranch || "main";
@@ -295,7 +295,7 @@ export const worker = new Worker(
         ]);
 
         hostPort = Math.floor(Math.random() * (40000 - 30000) + 30000);
-        const containerName = `container-${appId}`;
+        const containerName = `zploy-${appId}-${deployId}`;
 
         console.log(`[Worker] Container: ${containerName}`);
         console.log(`[Worker] Porta externa: ${hostPort}`);

@@ -33,8 +33,8 @@ export function runCommandWithLogs({
     }
 
     const child = spawn(command, args, {
-      cwd,
-      shell: process.platform === "win32",
+        cwd,
+        shell: false,
     });
 
     child.stdout.on("data", (data) => {

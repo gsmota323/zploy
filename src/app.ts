@@ -10,6 +10,7 @@ import kubernetesRoutes from "./routes/kubernetesRoutes";
 import { PrismaClient } from "@prisma/client";
 import { addDeployJob } from "./queues/deployQueue";
 import { getWebhookRepositoryUrl, repositoryMatches, shouldHandleGithubEvent, verifyGithubSignature } from "./utils/githubWebhook";
+import helmet from "helmet";
 
 const prisma = new PrismaClient();
 
@@ -26,6 +27,7 @@ app.use(
 );
 app.use(
   express.json({
+    limit: "256kb",
    verify: (req, _res, buf) => {
   const expressReq = req as express.Request & { rawBody?: Buffer };
 
@@ -35,6 +37,14 @@ app.use(
 },
   })
 );
+
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  })
+);
+
+app.use(helmet());
 
 // Serve o frontend estático
 app.use("/frontend", express.static(path.join(process.cwd(), "frontend")));

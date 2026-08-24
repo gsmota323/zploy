@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 
 export async function authenticateUser(identifier: string, password: string) {
   const login = identifier.trim();
+
   const user = await prisma.user.findFirst({
     where: {
       OR: [
@@ -25,13 +26,19 @@ export async function authenticateUser(identifier: string, password: string) {
     return null;
   }
 
+  const jwtSecret = process.env.JWT_SECRET;
+
+  if (!jwtSecret) {
+    throw new Error("JWT_SECRET não configurado.");
+  }
+
   const token = jwt.sign(
     {
       userId: user.id,
       email: user.email,
       username: user.username,
     },
-    process.env.JWT_SECRET as string,
+    jwtSecret,
     {
       expiresIn: "1d",
     }

@@ -28,8 +28,17 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
 
   const [, token] = authHeader.split(" ");
 
+  const jwtSecret = process.env.JWT_SECRET;
+
+  if (!jwtSecret) {
+    console.error("JWT_SECRET não configurado.");
+    return res.status(500).json({
+      error: "Erro interno de configuração.",
+    });
+  }
+
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
+    const decoded = jwt.verify(token, jwtSecret) as {
       userId: string;
       email?: string;
     };
