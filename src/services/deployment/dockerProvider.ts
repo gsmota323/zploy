@@ -5,6 +5,7 @@ import { promisify } from "util";
 import { DeploymentProvider, DeploymentConfig, DeploymentResult } from "./deploymentProvider";
 import { createDeployLog } from "../deployLogService";
 import { runCommandWithLogs } from "../../utils/runCommandWithLogs";
+import { selectAvailableHostPort } from "./dockerPortAllocator";
 
 const execFileAsync = promisify(execFile);
 
@@ -16,7 +17,6 @@ export class DockerProvider implements DeploymentProvider {
       `${envVar.key}=${envVar.value}`,
     ]);
 
-    const hostPort = Math.floor(Math.random() * (40000 - 30000) + 30000);
     const containerName = `zploy-${config.appId}`;
 
     // 1. Limpa o container antigo
@@ -32,23 +32,37 @@ export class DockerProvider implements DeploymentProvider {
       // Ignora se não existir
     }
 
-    // 2. Roda o novo container
-    await runCommandWithLogs({
-      command: "docker",
-      args: [
-        "run",
-        "-d",
-        ...envArgs,
-        "-e",
-        `PORT=${config.containerPort}`,
-        "-p",
-        `${hostPort}:${config.containerPort}`,
-        "--name",
-        containerName,
-        config.imageName,
-      ],
-      deployId: config.deployId,
-      type: "runtime",
+    // 2. Roda o novo container, tentando outra porta host se a escolhida já estiver ocupada.
+    const hostPort = await selectAvailableHostPort(async (candidatePort) => {
+      try {
+        await runCommandWithLogs({
+          command: "docker",
+          args: [
+            "run",
+            "-d",
+            ...envArgs,
+            "-e",
+            `PORT=${config.containerPort}`,
+            "-p",
+            `${candidatePort}:${config.containerPort}`,
+            "--name",
+            containerName,
+            config.imageName,
+          ],
+          deployId: config.deployId,
+          type: "runtime",
+        });
+      } catch (error) {
+        // O container pode ficar criado (porém não iniciado) quando o bind da porta falha;
+        // remove para permitir uma nova tentativa com o mesmo --name.
+        try {
+          await execFileAsync("docker", ["rm", "-f", containerName]);
+        } catch {
+          // ignora
+        }
+
+        throw error;
+      }
     });
 
     const appUrl = `http://localhost:${hostPort}`;

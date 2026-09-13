@@ -18,6 +18,7 @@ export function runCommandWithLogs({
 }: RunCommandWithLogsParams): Promise<void> {
   return new Promise((resolve, reject) => {
     const pendingWrites: Promise<unknown>[] = [];
+    let stderrTail = "";
 
     function saveLog(level: "info" | "error", message: string) {
       if (!message || !message.trim()) return;
@@ -43,7 +44,10 @@ export function runCommandWithLogs({
 
     child.stderr.on("data", (data) => {
       // Docker e Git muitas vezes escrevem progresso no stderr mesmo sem erro.
-      saveLog("info", data.toString());
+      const text = data.toString();
+      saveLog("info", text);
+      // Mantém só a cauda recente, o suficiente para diagnosticar a falha sem vazar output enorme.
+      stderrTail = (stderrTail + text).slice(-500);
     });
 
     child.on("error", async (error) => {
@@ -58,7 +62,12 @@ export function runCommandWithLogs({
       if (code === 0) {
         resolve();
       } else {
-        reject(new Error(`${command} finalizou com código ${code}`));
+        const detail = stderrTail.trim();
+        reject(
+          new Error(
+            `${command} finalizou com código ${code}${detail ? `: ${detail}` : ""}`
+          )
+        );
       }
     });
   });
