@@ -14,7 +14,29 @@ import { apiGeneralLimiter } from "./middlewares/rateLimiter";
 
 const app = express();
 
-app.set("trust proxy", 1);
+// Número de "hops" de reverse proxy confiáveis (para X-Forwarded-* / express-rate-limit).
+// Padrão seguro: nenhum proxy confiável (útil para o Zploy Local, sem proxy na frente).
+// Configure TRUST_PROXY_HOPS (ex.: "1") quando o Zploy Platform estiver atrás de um reverse proxy/load balancer.
+function resolveTrustProxyHops(): number | false {
+  const raw = process.env.TRUST_PROXY_HOPS;
+
+  if (raw === undefined || raw.trim() === "") {
+    return false;
+  }
+
+  const hops = Number(raw);
+
+  if (!Number.isInteger(hops) || hops < 0) {
+    console.warn(
+      `TRUST_PROXY_HOPS inválido ("${raw}"); ignorando X-Forwarded-* (comportamento seguro).`
+    );
+    return false;
+  }
+
+  return hops === 0 ? false : hops;
+}
+
+app.set("trust proxy", resolveTrustProxyHops());
 
 function isAuthEnabled() {
   return process.env.AUTH_ENABLED !== "false";
