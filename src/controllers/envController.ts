@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import prisma from '../config/prisma';
 import { saveEnv, listEnvs, deleteEnv } from '../services/envService';
+import { isValidEnvVarKey, ENV_VAR_KEY_MAX_LENGTH } from '../utils/envKeyValidation';
 
 
 async function checkAppOwnership(appId: string, userId: string) {
@@ -19,7 +20,13 @@ export async function add(req: AuthRequest, res: Response) {
   try {
     const appId = String(req.params.appId); 
     const { key, value } = req.body;
-    
+
+    if (!isValidEnvVarKey(key)) {
+      return res.status(400).json({
+        error: `key inválida. Use apenas letras, números e "_", começando com letra ou "_" (máx. ${ENV_VAR_KEY_MAX_LENGTH} caracteres).`,
+      });
+    }
+
     await checkAppOwnership(appId, String(req.userId));
     const env = await saveEnv(appId, key, value);
     

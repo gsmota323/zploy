@@ -1,7 +1,14 @@
 import prisma from '../config/prisma';
 import { encryptEnvValue } from '../utils/envCrypto';
+import { isValidEnvVarKey } from '../utils/envKeyValidation';
 
 export async function saveEnv(appId: string, key: string, value: string) {
+  // Barreira de segurança: garante que nenhuma chave inválida seja persistida, mesmo que
+  // um futuro chamador interno pule a validação feita no controller.
+  if (!isValidEnvVarKey(key)) {
+    throw new Error('key inválida para variável de ambiente.');
+  }
+
   // Verifica se a variável já existe (ex: DATABASE_URL)
   const existing = await prisma.envVar.findFirst({
     where: { appId, key }
