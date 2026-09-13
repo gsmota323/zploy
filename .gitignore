@@ -1,9 +1,20 @@
 node_modules
-# Keep environment variables out of version control
+
+# Arquivos de ambiente — NUNCA versionar secrets
+# Permite apenas o template público (.env.example)
 .env
+.env.*
+!.env.example
+
 dist
 /src/generated/prisma
 
 ROTEIRO.md
 
 .vscode
+
+# Deploys temporários e manifests gerados em runtime
+kubernetes/manifests/*
+!kubernetes/manifests/.gitkeep
+temp-deploys/*
+!temp-deploys/.gitkeep
