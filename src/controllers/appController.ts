@@ -2,10 +2,8 @@ import { Response, Request } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import { createApp, getUserApps, deleteApp } from '../services/appService';
 import { addDeployJob } from '../queues/deployQueue';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/prisma';
 import { normalizeRepositoryUrl } from '../utils/githubWebhook';
-
-const prisma = new PrismaClient();
 
 export async function create(req: AuthRequest, res: Response) {
   try {

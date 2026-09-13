@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../config/prisma";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { AuthRequest } from "../middlewares/authMiddleware";
@@ -11,7 +11,6 @@ import {
   rollbackKubernetesDeployment,
 } from "../utils/kubernetes";
 
-const prisma = new PrismaClient();
 const execFileAsync = promisify(execFile);
 
 function normalizeTail(value: string | undefined) {

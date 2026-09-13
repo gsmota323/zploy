@@ -1,14 +1,10 @@
 import { Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../config/prisma";
 import { addDeployJob } from "../queues/deployQueue";
 import { createDeployLog, getDeployLogs } from "../services/deployLogService";
 import { AuthRequest } from "../middlewares/authMiddleware";
 import { exec, execFile } from "node:child_process";
 import { promisify } from "util";
-
-
-
-const prisma = new PrismaClient();
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);

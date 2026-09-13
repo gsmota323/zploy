@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../config/prisma';
 
 export async function saveEnv(appId: string, key: string, value: string) {
   // Verifica se a variável já existe (ex: DATABASE_URL)

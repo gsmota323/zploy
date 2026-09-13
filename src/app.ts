@@ -6,12 +6,10 @@ import authRoutes from "./routes/authRoutes";
 import appRoutes from "./routes/appRoutes";
 import deployRoutes from "./routes/deployRoutes";
 import kubernetesRoutes from "./routes/kubernetesRoutes";
-import { PrismaClient } from "@prisma/client";
+import prisma from "./config/prisma";
 import { addDeployJob } from "./queues/deployQueue";
 import { getWebhookRepositoryUrl, repositoryMatches, shouldHandleGithubEvent, verifyGithubSignature } from "./utils/githubWebhook";
 import helmet from "helmet";
-
-const prisma = new PrismaClient();
 
 const app = express();
 

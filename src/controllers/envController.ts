@@ -1,9 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/prisma';
 import { saveEnv, listEnvs, deleteEnv } from '../services/envService';
-
-const prisma = new PrismaClient();
 
 
 async function checkAppOwnership(appId: string, userId: string) {

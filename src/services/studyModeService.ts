@@ -1,7 +1,5 @@
 import bcrypt from "bcrypt";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "../config/prisma";
 
 export async function ensureStudyModeUserId() {
   const email = process.env.LOCAL_DEV_EMAIL || "study@zploy.local";

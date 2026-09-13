@@ -1,7 +1,5 @@
 import bcrypt from 'bcrypt';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../config/prisma';
 
 export async function createUser(email: string, passwordText: string, username?: string) {
   // 1. Criptografa a senha antes de salvar
