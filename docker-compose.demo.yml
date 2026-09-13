@@ -42,3 +42,10 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
+    healthcheck:
+      # Lê o heartbeat em arquivo gravado pelo próprio worker (dist/ já existe na imagem, mesmo rodando via ts-node-dev).
+      test: ["CMD", "node", "dist/utils/workerHealthCheckCli.js"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

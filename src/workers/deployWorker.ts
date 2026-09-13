@@ -21,6 +21,7 @@ import {
   DEPLOY_LOCK_RETRY_DELAY_MS,
 } from "../utils/deployLock";
 import { decryptEnvValue } from "../utils/envCrypto";
+import { writeWorkerHeartbeat, WORKER_HEALTH_INTERVAL_MS } from "../utils/workerHealth";
 
 const execFileAsync = promisify(execFile);
 
@@ -470,3 +471,16 @@ worker.on("completed", (job, returnvalue) => {
 worker.on("failed", (job, err) => {
   console.log(`🔴 [BullMQ] Job ${job?.id} falhou. Motivo: ${err.message}`);
 });
+
+// Heartbeat em arquivo para healthcheck do container (não abre porta/servidor HTTP no worker).
+function reportWorkerHealth() {
+  const redisStatus = redisConnection.status;
+  writeWorkerHeartbeat({
+    status: redisStatus === "ready" ? "ok" : "error",
+    redisStatus,
+    message: redisStatus === "ready" ? undefined : `Conexão Redis em estado "${redisStatus}".`,
+  });
+}
+
+reportWorkerHealth();
+setInterval(reportWorkerHealth, WORKER_HEALTH_INTERVAL_MS);
