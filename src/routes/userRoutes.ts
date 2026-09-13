@@ -1,11 +1,10 @@
 import { Router } from 'express';
-import { listUsers } from '../controllers/userController';
+import { getMe } from '../controllers/userController';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();
 
-// Adicionamos o authMiddleware aqui. 
-// Agora, NINGUÉM consegue listar os usuários se não mandar um Token JWT válido no Header!
-router.get('/', authMiddleware, listUsers);
+// Cada usuário só pode consultar o próprio perfil (nunca a lista de outros usuários).
+router.get('/me', authMiddleware, getMe);
 
 export default router;

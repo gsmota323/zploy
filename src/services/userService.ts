@@ -23,8 +23,9 @@ export async function createUser(email: string, passwordText: string, username?:
   return user;
 }
 
-export async function getAllUsers() {
-  return await prisma.user.findMany({
+export async function getUserById(id: string) {
+  return await prisma.user.findUnique({
+    where: { id },
     select: {
       id: true,
       email: true,
