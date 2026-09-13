@@ -3,7 +3,7 @@ import { AuthRequest } from '../middlewares/authMiddleware';
 import { createApp, getUserApps, deleteApp } from '../services/appService';
 import { addDeployJob } from '../queues/deployQueue';
 import prisma from '../config/prisma';
-import { normalizeRepositoryUrl } from '../utils/githubWebhook';
+import { normalizeRepositoryUrl, isValidGithubRepositoryUrl } from '../utils/githubWebhook';
 
 export async function create(req: AuthRequest, res: Response) {
   try {
@@ -30,6 +30,18 @@ export async function create(req: AuthRequest, res: Response) {
     ) {
       return res.status(400).json({
         error: "repositoryUrl inválida.",
+      });
+    }
+
+        if (
+      repositoryUrl !== undefined &&
+      repositoryUrl !== null &&
+      typeof repositoryUrl === "string" &&
+      repositoryUrl.trim().length > 0 &&
+      !isValidGithubRepositoryUrl(normalizeRepositoryUrl(repositoryUrl) || "")
+    ) {
+      return res.status(400).json({
+        error: "repositoryUrl deve ser um repositório GitHub válido.",
       });
     }
 

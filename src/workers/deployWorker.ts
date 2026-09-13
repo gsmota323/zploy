@@ -164,6 +164,8 @@ export const worker = new Worker(
         "--branch",
         targetBranch,
         "--single-branch",
+        // "--" impede que um repositoryUrl iniciado por "-" seja interpretado como opção do git.
+        "--",
         repositoryUrl,
         tempDeployDir,
       ];

@@ -8,24 +8,10 @@ import { promisify } from "util";
 import { DeploymentProvider } from "../services/deployment/deploymentProvider";
 import { KubernetesProvider } from "../services/deployment/kubernetesProvider";
 import { DockerProvider } from "../services/deployment/dockerProvider";
+import { isValidGithubRepositoryUrl } from "../utils/githubWebhook";
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
-
-
-function isValidGithubRepositoryUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-
-    return (
-      url.protocol === "https:" &&
-      url.hostname === "github.com" &&
-      /^\/[^/]+\/[^/]+\/?$/.test(url.pathname)
-    );
-  } catch {
-    return false;
-  }
-}
 
 export async function startDeploy(req: AuthRequest, res: Response) {
   try {

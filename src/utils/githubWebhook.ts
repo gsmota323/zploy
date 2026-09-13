@@ -4,6 +4,21 @@ export function shouldHandleGithubEvent(event?: string) {
   return event === "push" || event === "ping";
 }
 
+// Única fonte de verdade para validar repositoryUrl: exige https://github.com/<owner>/<repo>.
+export function isValidGithubRepositoryUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+
+    return (
+      url.protocol === "https:" &&
+      url.hostname === "github.com" &&
+      /^\/[^/]+\/[^/]+\/?$/.test(url.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function normalizeRepositoryUrl(value?: string | null) {
   if (!value) return undefined;
 
