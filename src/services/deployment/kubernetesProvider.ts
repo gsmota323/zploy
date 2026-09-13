@@ -1,8 +1,9 @@
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { DeploymentProvider, DeploymentConfig, DeploymentResult } from "./deploymentProvider";
-import { deployToKubernetes, resolveNamespace } from "../../utils/kubernetes";
+import { deployToKubernetes, resolveNamespace, buildDeploymentName } from "../../utils/kubernetes";
 import { createDeployLog } from "../deployLogService";
+import prisma from "../../config/prisma";
 
 const execFileAsync = promisify(execFile);
 
@@ -31,14 +32,40 @@ export class KubernetesProvider implements DeploymentProvider {
   async stop(appId: string): Promise<void> {
     const namespace = resolveNamespace();
     try {
+      let deploymentName: string | undefined;
+
+      const app = await prisma.app.findUnique({ where: { id: appId } });
+      if (app) {
+        deploymentName = buildDeploymentName(app.name, app.id);
+      } else {
+        const { stdout } = await execFileAsync("kubectl", [
+          "get",
+          "deployment",
+          "-n",
+          namespace,
+          "-o",
+          "jsonpath={.items[*].metadata.name}",
+        ]);
+        const suffix = appId.slice(0, 6);
+        deploymentName = stdout
+          .trim()
+          .split(/\s+/)
+          .find((name) => name.endsWith(`-${suffix}`));
+      }
+
+      if (!deploymentName) {
+        console.warn(`[KubernetesProvider] Deployment não encontrado para o app ${appId}`);
+        return;
+      }
+
       // Escala o Deployment para 0 réplicas (forma oficial de "parar" no K8s sem deletar)
       await execFileAsync("kubectl", [
         "scale",
         "deployment",
-        `-l app=zploy-${appId}`, // Assumindo que seu label termine assim, ou ajuste conforme seu buildDeploymentName
+        deploymentName,
         "--replicas=0",
         "-n",
-        namespace
+        namespace,
       ]);
     } catch (error) {
       console.warn(`[KubernetesProvider] Falha ao parar pods do app ${appId}`);

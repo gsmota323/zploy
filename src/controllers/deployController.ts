@@ -5,6 +5,9 @@ import { createDeployLog, getDeployLogs } from "../services/deployLogService";
 import { AuthRequest } from "../middlewares/authMiddleware";
 import { exec, execFile } from "node:child_process";
 import { promisify } from "util";
+import { DeploymentProvider } from "../services/deployment/deploymentProvider";
+import { KubernetesProvider } from "../services/deployment/kubernetesProvider";
+import { DockerProvider } from "../services/deployment/dockerProvider";
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -214,8 +217,6 @@ export async function stopApp(req: AuthRequest, res: Response) {
       });
     }
 
-    const containerName = `zploy-${app.id}`;
-
     const lastDeploy = await prisma.deploy.findFirst({
       where: {
         appId: app.id,
@@ -223,36 +224,50 @@ export async function stopApp(req: AuthRequest, res: Response) {
       orderBy: {
         createdAt: "desc",
       },
+      include: {
+        deployLogs: {
+          where: { type: "runtime" },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+        },
+      },
     });
 
+    const isKubernetes =
+      lastDeploy?.deployLogs.some((log) => log.message.includes("Kubernetes")) ||
+      (app.url ? !app.url.includes("localhost:") : false) ||
+      process.env.REQUIRE_KUBERNETES === "true";
+
+    const provider: DeploymentProvider = isKubernetes
+      ? new KubernetesProvider()
+      : new DockerProvider();
+
     try {
-      await execFileAsync("docker", [
-        "rm",
-        "-f",
-        containerName,
-      ]);
+      await provider.stop(app.id);
 
       if (lastDeploy) {
         await createDeployLog({
           deployId: lastDeploy.id,
           type: "runtime",
           level: "info",
-          message: `Container derrubado com sucesso: ${containerName}`,
+          message: isKubernetes
+            ? "Aplicação parada no Kubernetes com sucesso."
+            : `Container derrubado com sucesso: zploy-${app.id}`,
         });
       }
-    } catch (dockerError) {
+    } catch (stopError) {
       if (lastDeploy) {
         await createDeployLog({
           deployId: lastDeploy.id,
           type: "runtime",
           level: "error",
-          message: `Erro ao derrubar container ${containerName}: ${(dockerError as Error).message}`,
+          message: `Erro ao derrubar aplicação: ${(stopError as Error).message}`,
         });
       }
 
       return res.status(500).json({
         error: "Erro ao derrubar container.",
-        details: (dockerError as Error).message,
+        details: (stopError as Error).message,
       });
     }
 

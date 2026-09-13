@@ -1,9 +1,8 @@
 import prisma from '../config/prisma';
 import { normalizeRepositoryUrl } from '../utils/githubWebhook';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-
-const execFileAsync = promisify(execFile);
+import { DeploymentProvider } from './deployment/deploymentProvider';
+import { KubernetesProvider } from './deployment/kubernetesProvider';
+import { DockerProvider } from './deployment/dockerProvider';
 
 export async function createApp(
   name: string,
@@ -45,7 +44,22 @@ export async function getUserApps(userId: string) {
 
 export async function deleteApp(appId: string, userId: string) {
   // 1. Busca o app para ver se ele existe
-  const app = await prisma.app.findUnique({ where: { id: appId } });
+  const app = await prisma.app.findUnique({
+    where: { id: appId },
+    include: {
+      deploys: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        include: {
+          deployLogs: {
+            where: { type: 'runtime' },
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+          },
+        },
+      },
+    },
+  });
 
   if (!app) {
     throw new Error('Aplicativo não encontrado.');
@@ -56,19 +70,26 @@ export async function deleteApp(appId: string, userId: string) {
     throw new Error('Acesso negado. Você não é o dono deste app.');
   }
 
-  // ---> NOVO: Limpeza de infraestrutura (Runtime) <---
-  const containerName = `zploy-${appId}`;
-  
+  // 3. Limpeza de infraestrutura (Runtime) via DeploymentProvider
+  const lastDeploy = app.deploys[0];
+
+  const isKubernetes =
+    lastDeploy?.deployLogs.some((log) => log.message.includes("Kubernetes")) ||
+    (app.url ? !app.url.includes("localhost:") : false) ||
+    process.env.REQUIRE_KUBERNETES === "true";
+
+  const provider: DeploymentProvider = isKubernetes
+    ? new KubernetesProvider()
+    : new DockerProvider();
+
   try {
-    await execFileAsync("docker", ["rm", "-f", containerName]);
-    console.log(`[ZPLOY] Container ${containerName} removido com sucesso.`);
+    await provider.remove(appId);
+    console.log(`[ZPLOY] Recursos de infraestrutura (${isKubernetes ? "Kubernetes" : "Docker"}) do app ${appId} removidos.`);
   } catch (error) {
-    console.log(`[ZPLOY] Container ${containerName} não estava rodando no Docker. Seguindo...`);
+    console.warn(`[ZPLOY] Erro ao remover recursos do app ${appId}. Seguindo...`, error);
   }
 
-  // (No futuro, você pode adicionar aqui a limpeza do Kubernetes: kubectl delete all -l app=zploy-${appId})
-
-  // 3. Deleta do banco
+  // 4. Deleta do banco
   return await prisma.app.delete({
     where: { id: appId }
   });
