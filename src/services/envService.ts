@@ -1,4 +1,5 @@
 import prisma from '../config/prisma';
+import { encryptEnvValue } from '../utils/envCrypto';
 
 export async function saveEnv(appId: string, key: string, value: string) {
   // Verifica se a variável já existe (ex: DATABASE_URL)
@@ -6,19 +7,22 @@ export async function saveEnv(appId: string, key: string, value: string) {
     where: { appId, key }
   });
 
+  const encryptedValue = encryptEnvValue(value);
+
   // Se existir, atualiza. Se não, cria uma nova.
   if (existing) {
     return await prisma.envVar.update({
       where: { id: existing.id },
-      data: { value }
+      data: { value: encryptedValue }
     });
   }
 
   return await prisma.envVar.create({
-    data: { appId, key, value }
+    data: { appId, key, value: encryptedValue }
   });
 }
 
+// Retorna os registros como estão armazenados (valor cifrado) - nunca descriptografa para listagem/consulta.
 export async function listEnvs(appId: string) {
   return await prisma.envVar.findMany({
     where: { appId }

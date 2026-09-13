@@ -10,6 +10,11 @@ async function checkAppOwnership(appId: string, userId: string) {
   if (app.userId !== userId) throw new Error('Acesso negado. Você não é o dono deste app.');
 }
 
+// Nunca deixa o valor (cifrado ou não) sair pela API - apenas metadados não sensíveis.
+function toPublicEnvVar(env: { id: string; key: string; appId: string }) {
+  return { id: env.id, key: env.key, appId: env.appId };
+}
+
 export async function add(req: AuthRequest, res: Response) {
   try {
     const appId = String(req.params.appId); 
@@ -18,7 +23,7 @@ export async function add(req: AuthRequest, res: Response) {
     await checkAppOwnership(appId, String(req.userId));
     const env = await saveEnv(appId, key, value);
     
-    res.status(201).json(env);
+    res.status(201).json(toPublicEnvVar(env));
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -31,7 +36,7 @@ export async function list(req: AuthRequest, res: Response) {
     await checkAppOwnership(appId, String(req.userId));
     const envs = await listEnvs(appId);
     
-    res.json(envs);
+    res.json(envs.map(toPublicEnvVar));
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }

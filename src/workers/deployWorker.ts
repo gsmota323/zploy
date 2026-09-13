@@ -20,6 +20,7 @@ import {
   DEPLOY_LOCK_RENEW_INTERVAL_MS,
   DEPLOY_LOCK_RETRY_DELAY_MS,
 } from "../utils/deployLock";
+import { decryptEnvValue } from "../utils/envCrypto";
 
 const execFileAsync = promisify(execFile);
 
@@ -317,14 +318,15 @@ export const worker = new Worker(
       // ---------------------------------------------------------
       const envVars = await prisma.envVar.findMany({ where: { appId } });
       const requireKubernetes = process.env.REQUIRE_KUBERNETES === "true";
-      
+
       const deployConfig: DeploymentConfig = {
         appId,
         appName: app?.name || "app",
         imageName,
         containerPort,
         deployId,
-        envVars: envVars.map(e => ({ key: e.key, value: e.value })),
+        // Descriptografa somente aqui, no momento em que o container/Deployment precisa dos valores reais.
+        envVars: envVars.map(e => ({ key: e.key, value: decryptEnvValue(e.value) })),
         minReplicas: app?.minReplicas ?? Number(process.env.KUBERNETES_MIN_REPLICAS ?? 1),
         maxReplicas: app?.maxReplicas ?? Number(process.env.KUBERNETES_MAX_REPLICAS ?? 3),
         targetCPUUtilizationPercentage: app?.targetCPUUtilizationPercentage ?? Number(process.env.KUBERNETES_CPU_TARGET ?? 70),
