@@ -1,4 +1,4 @@
-import { Worker, Job } from "bullmq";
+import { Worker, Job, DelayedError } from "bullmq";
 import { redisConnection } from "../config/redis";
 import { promisify } from "util";
 import { execFile } from "child_process";
@@ -13,12 +13,19 @@ import { inferContainerPort, resolveDockerfileContent } from "../utils/dockerfil
 import { DockerProvider } from "../services/deployment/dockerProvider";
 import { KubernetesProvider } from "../services/deployment/kubernetesProvider";
 import { DeploymentConfig } from "../services/deployment/deploymentProvider";
+import {
+  createLockToken,
+  deployLockManager,
+  DEPLOY_LOCK_TTL_MS,
+  DEPLOY_LOCK_RENEW_INTERVAL_MS,
+  DEPLOY_LOCK_RETRY_DELAY_MS,
+} from "../utils/deployLock";
 
 const execFileAsync = promisify(execFile);
 
 export const worker = new Worker(
   "DeployQueue",
-  async (job: Job) => {
+  async (job: Job, token?: string) => {
     const { appId, repositoryUrl, deployId, dockerfile, branch } = job.data as {
       appId: string;
       repositoryUrl: string;
@@ -57,6 +64,56 @@ export const worker = new Worker(
     console.log(`[Worker] Repositório alvo: ${repositoryUrl}`);
     console.log(`[Worker] Branch alvo: ${targetBranch}`);
     console.log(`[Worker] Diretório temporário: ${tempDeployDir}`);
+
+    // Lock distribuído por appId: evita que dois deploys da mesma app rodem ao mesmo tempo,
+    // mesmo com múltiplos processos/réplicas do worker (o BullMQ concurrency não cobre isso).
+    const lockToken = createLockToken();
+    let lockAcquired = false;
+
+    try {
+      lockAcquired = await deployLockManager.acquire(appId, lockToken, DEPLOY_LOCK_TTL_MS);
+    } catch (lockError) {
+      const reason = lockError instanceof Error ? lockError.message : String(lockError);
+      console.error(`[Worker] Falha ao consultar lock de deploy do app ${appId}: ${reason}`);
+
+      try {
+        await createDeployLog({
+          deployId,
+          type: "build",
+          level: "error",
+          message: `Falha ao adquirir lock de deploy: ${reason}`,
+        });
+        await prisma.deploy.update({ where: { id: deployId }, data: { status: "failed" } });
+        await prisma.app.update({ where: { id: appId }, data: { status: "failed" } });
+      } catch (dbError) {
+        console.error("[Worker] Não foi possível registrar falha de lock no banco:", dbError);
+      }
+
+      throw lockError;
+    }
+
+    if (!lockAcquired) {
+      console.log(
+        `[Worker] App ${appId} já possui um deploy em andamento. Reagendando job ${job.id}.`
+      );
+
+      // Não é uma falha: apenas reagenda o job (skipAttempt=true) para tentar novamente em breve,
+      // sem consumir tentativas de retry e sem marcar o deploy como failed.
+      await job.moveToDelayed(Date.now() + DEPLOY_LOCK_RETRY_DELAY_MS, token);
+      throw new DelayedError();
+    }
+
+    const lockRenewInterval = setInterval(() => {
+      deployLockManager.renew(appId, lockToken, DEPLOY_LOCK_TTL_MS).then((renewed) => {
+        if (!renewed) {
+          console.warn(
+            `[Worker] Não foi possível renovar o lock de deploy do app ${appId} (job ${job.id}).`
+          );
+        }
+      }).catch((renewError) => {
+        console.warn(`[Worker] Erro ao renovar lock de deploy do app ${appId}:`, renewError);
+      });
+    }, DEPLOY_LOCK_RENEW_INTERVAL_MS);
 
     try {
       await createDeployLog({
@@ -384,6 +441,15 @@ export const worker = new Worker(
       }
 
       throw new Error(`Falha no processamento: ${errorMessage}`);
+    } finally {
+      // Sempre libera o lock e para a renovação, mesmo em caso de sucesso, erro ou timeout.
+      clearInterval(lockRenewInterval);
+
+      try {
+        await deployLockManager.release(appId, lockToken);
+      } catch (releaseError) {
+        console.warn(`[Worker] Falha ao liberar lock de deploy do app ${appId}:`, releaseError);
+      }
     }
   },
   {

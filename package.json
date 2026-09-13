@@ -27,7 +27,6 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@kubernetes/client-node": "^1.4.0",
     "@prisma/client": "^5.22.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.76.6",
@@ -38,8 +37,7 @@
     "helmet": "^8.3.0",
     "ioredis": "^5.10.1",
     "jsonwebtoken": "^9.0.3",
-    "prisma": "^5.22.0",
-    "simple-git": "^3.36.0"
+    "prisma": "^5.22.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

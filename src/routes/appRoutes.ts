@@ -4,6 +4,7 @@ import { create, list as listApps, remove as removeApp, redeployLast } from '../
 import { startDeploy, stopApp } from '../controllers/deployController'; 
 import { add as addEnv, list as listEnvs, remove as removeEnv } from '../controllers/envController';
 import { authMiddleware } from '../middlewares/authMiddleware';
+import { deployLimiter } from '../middlewares/rateLimiter';
 
 
 const router = Router();
@@ -18,8 +19,8 @@ router.delete('/:id', removeApp);
 
 // --- Rota de Deploy (Foca no DeployController) ---
 // Note que removemos o 'authMiddleware' daqui pois já está protegido pelo router.use
-router.post('/:id/deploy', startDeploy);
-router.post('/:id/redeploy', redeployLast);
+router.post('/:id/deploy', deployLimiter, startDeploy);
+router.post('/:id/redeploy', deployLimiter, redeployLast);
 
 // --- Rotas de Variáveis de Ambiente ---
 router.post('/:appId/envs', addEnv);

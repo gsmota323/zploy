@@ -94,6 +94,23 @@ export async function startDeploy(req: AuthRequest, res: Response) {
       });
     }
 
+    // Checagem fail-fast (UX): não substitui o lock distribuído do worker, apenas evita
+    // enfileirar deploys óbvios em duplicidade. Corridas ainda são resolvidas pelo Redis lock.
+    const ongoingDeploy = await prisma.deploy.findFirst({
+      where: {
+        appId: app.id,
+        status: { in: ["pending", "building"] },
+      },
+    });
+
+    if (ongoingDeploy) {
+      return res.status(409).json({
+        error: "Já existe um deploy em andamento para este app.",
+        deployId: ongoingDeploy.id,
+        status: ongoingDeploy.status,
+      });
+    }
+
     const newDeploy = await prisma.deploy.create({
       data: {
         appId: app.id,

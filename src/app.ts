@@ -10,8 +10,11 @@ import prisma from "./config/prisma";
 import { addDeployJob } from "./queues/deployQueue";
 import { getWebhookRepositoryUrl, repositoryMatches, shouldHandleGithubEvent, verifyGithubSignature } from "./utils/githubWebhook";
 import helmet from "helmet";
+import { apiGeneralLimiter } from "./middlewares/rateLimiter";
 
 const app = express();
+
+app.set("trust proxy", 1);
 
 function isAuthEnabled() {
   return process.env.AUTH_ENABLED !== "false";
@@ -25,13 +28,13 @@ app.use(
 app.use(
   express.json({
     limit: "256kb",
-   verify: (req, _res, buf) => {
-  const expressReq = req as express.Request & { rawBody?: Buffer };
+    verify: (req, _res, buf) => {
+      const expressReq = req as express.Request & { rawBody?: Buffer };
 
-  if (expressReq.originalUrl === "/webhooks/github") {
-    expressReq.rawBody = Buffer.from(buf);
-  }
-},
+      if (expressReq.originalUrl === "/webhooks/github") {
+        expressReq.rawBody = Buffer.from(buf);
+      }
+    },
   })
 );
 
@@ -42,9 +45,9 @@ app.use(helmet());
 app.use("/frontend", express.static(path.join(process.cwd(), "frontend")));
 app.use(express.static(path.join(process.cwd(), "frontend")));
 
-app.use("/users", userRoutes);
+app.use("/users", apiGeneralLimiter, userRoutes);
 app.use("/auth", authRoutes); 
-app.use("/apps", appRoutes);
+app.use("/apps", apiGeneralLimiter, appRoutes);
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(process.cwd(), "frontend", "index.html"));
@@ -142,7 +145,7 @@ app.post("/webhooks/github", async (req, res) => {
   }
 });
 
-app.use("/deploys", deployRoutes);
-app.use("/kubernetes", kubernetesRoutes);
+app.use("/deploys", apiGeneralLimiter, deployRoutes);
+app.use("/kubernetes", apiGeneralLimiter, kubernetesRoutes);
 
 export default app;

@@ -177,6 +177,23 @@ export async function redeployLast(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: 'Este app não possui um repositório associado.' });
     }
 
+    // Checagem fail-fast (UX): não substitui o lock distribuído do worker, apenas evita
+    // enfileirar deploys óbvios em duplicidade. Corridas ainda são resolvidas pelo Redis lock.
+    const ongoingDeploy = await prisma.deploy.findFirst({
+      where: {
+        appId: app.id,
+        status: { in: ['pending', 'building'] },
+      },
+    });
+
+    if (ongoingDeploy) {
+      return res.status(409).json({
+        error: 'Já existe um deploy em andamento para este app.',
+        deployId: ongoingDeploy.id,
+        status: ongoingDeploy.status,
+      });
+    }
+
     const newDeploy = await prisma.deploy.create({
       data: {
         appId: app.id,
