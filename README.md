@@ -93,10 +93,8 @@ Resumo dos comandos simplificados:
 
 - `npm run up`: sobe modo local padrão (API + worker + postgres + redis)
 - `npm run down`: encerra modo local padrão
-- `npm run up:demo`: sobe modo demo totalmente em containers
-- `npm run down:demo`: encerra modo demo e limpa os containers da demo
 
-Os comandos `start`, `demo:up` e demais scripts continuam disponíveis para execução direta.
+
 
 ### Modo local padrão
 
@@ -130,31 +128,6 @@ npm run worker
 - Modo plataforma: mantenha `AUTH_ENABLED=true`
 - Modo estudo: defina `AUTH_ENABLED=false`
 
-### Modo demo (tudo em container)
-
-Para rodar API, worker, PostgreSQL e Redis em containers:
-
-```bash
-npm run up:demo
-```
-
-Para encerrar o modo demo:
-
-```bash
-npm run down:demo
-```
-
-No modo demo, o backend fica disponível em:
-
-```bash
-http://localhost:3001/
-```
-
-Se quiser usar outra porta no host:
-
-```bash
-APP_PORT=3005 npm run demo:up
-```
 
 ## Como usar
 

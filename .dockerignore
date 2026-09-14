@@ -3,7 +3,6 @@ npm-debug.log
 .git
 .gitignore
 Dockerfile
-docker-compose.demo.yml
 temp-deploys
 .vscode
 dist

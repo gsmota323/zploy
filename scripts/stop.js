@@ -4,7 +4,6 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const args = process.argv.slice(2);
 
-const stopDemo = args.includes('--demo');
 const killNode = args.includes('--kill-node');
 
 function runStep(command, commandArgs, name, options = {}) {
@@ -16,26 +15,31 @@ function runStep(command, commandArgs, name, options = {}) {
     ...options,
   });
 
-  return result.status === 0;
+  if (result.status !== 0) {
+    console.error(`[${name}] falhou com código ${result.status}`);
+    return false;
+  }
+
+  return true;
 }
 
 function main() {
   console.log('Encerrando Zploy...');
 
-  if (stopDemo) {
-    runStep(
-      'docker',
-      ['compose', '-f', 'docker-compose.yml', '-f', 'docker-compose.demo.yml', 'down'],
-      'docker-demo-down'
-    );
-  }
-
-  runStep('docker', ['compose', 'down'], 'docker-down');
+  runStep(
+    'docker',
+    ['compose', 'down'],
+    'docker-down'
+  );
 
   // Opcional: finalizar processos Node órfãos no Windows.
   // Mantido por flag para não matar o próprio `node scripts/stop.js`.
   if (killNode && process.platform === 'win32') {
-    runStep('taskkill', ['/F', '/IM', 'node.exe'], 'kill-node');
+    runStep(
+      'taskkill',
+      ['/F', '/IM', 'node.exe'],
+      'kill-node'
+    );
   }
 
   console.log('Zploy encerrado.');
