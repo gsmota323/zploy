@@ -16,7 +16,7 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
       req.userId = await ensureStudyModeUserId();
       return next();
     } catch (error) {
-      return res.status(500).json({ error: "Não foi possível inicializar o usuário do modo estudo." });
+      return res.status(500).json({ error: "Não foi possível inicializar o usuário do modo local." });
     }
   }
 

@@ -8,8 +8,8 @@ export async function ensureStudyModeUserId() {
     return cachedUserId;
   }
 
-  const email = process.env.LOCAL_DEV_EMAIL || "study@zploy.local";
-  const username = process.env.LOCAL_DEV_USERNAME || "study";
+  const email = process.env.LOCAL_DEV_EMAIL || "local@zploy.local";
+  const username = process.env.LOCAL_DEV_USERNAME || "local";
 
   const existingUser = await prisma.user.findUnique({
     where: { email },
@@ -21,7 +21,7 @@ export async function ensureStudyModeUserId() {
     return cachedUserId;
   }
 
-  const password = process.env.LOCAL_DEV_PASSWORD || "study123";
+  const password = process.env.LOCAL_DEV_PASSWORD || "local123";
   const hashedPassword = await bcrypt.hash(password, 10);
 
   const user = await prisma.user.upsert({
@@ -41,3 +41,4 @@ export async function ensureStudyModeUserId() {
 export function resetStudyModeUserCache() {
   cachedUserId = null;
 }
+

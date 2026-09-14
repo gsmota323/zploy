@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -6,6 +7,7 @@
   <title>Zploy — Deploy sem complicação</title>
   <meta name="description" content="Plataforma open-source de deploy automático para aplicações Node.js e Python com Docker.">
   <link rel="stylesheet" href="css/main.css">
+
   <style>
     /* ===== HERO ===== */
     .hero {
@@ -20,9 +22,21 @@
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124,92,252,0.18) 0%, transparent 62%),
-        radial-gradient(ellipse 50% 40% at 100% 50%, rgba(161,132,255,0.09) 0%, transparent 52%),
-        radial-gradient(ellipse 50% 40% at 0% 80%, rgba(124,92,252,0.06) 0%, transparent 52%);
+        radial-gradient(
+          ellipse 80% 60% at 50% -10%,
+          rgba(124,92,252,0.18) 0%,
+          transparent 62%
+        ),
+        radial-gradient(
+          ellipse 50% 40% at 100% 50%,
+          rgba(161,132,255,0.09) 0%,
+          transparent 52%
+        ),
+        radial-gradient(
+          ellipse 50% 40% at 0% 80%,
+          rgba(124,92,252,0.06) 0%,
+          transparent 52%
+        );
       pointer-events: none;
     }
 
@@ -34,7 +48,11 @@
         linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
       background-size: 64px 64px;
       pointer-events: none;
-      mask-image: linear-gradient(to bottom, black 0%, transparent 80%);
+      mask-image: linear-gradient(
+        to bottom,
+        black 0%,
+        transparent 80%
+      );
     }
 
     .hero-content {
@@ -98,7 +116,9 @@
       border: 1px solid rgba(255,255,255,0.16);
       border-radius: var(--radius-lg);
       overflow: hidden;
-      box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 rgba(0,0,0,0);
+      box-shadow:
+        0 32px 80px rgba(0,0,0,0.6),
+        0 0 0 rgba(0,0,0,0);
     }
 
     .terminal-mock-header {
@@ -117,12 +137,29 @@
       line-height: 1.9;
     }
 
-    .t-dim { color: #3a5040; }
-    .t-cmd { color: #fff; }
-    .t-green { color: #d6d6d6; }
-    .t-cyan { color: #f2f2f2; }
-    .t-yellow { color: #ffb03a; }
-    .t-purple { color: #b5b5b5; }
+    .t-dim {
+      color: #3a5040;
+    }
+
+    .t-cmd {
+      color: #fff;
+    }
+
+    .t-green {
+      color: #d6d6d6;
+    }
+
+    .t-cyan {
+      color: #f2f2f2;
+    }
+
+    .t-yellow {
+      color: #ffb03a;
+    }
+
+    .t-purple {
+      color: #b5b5b5;
+    }
 
     /* ===== STATS STRIP ===== */
     .stats-strip {
@@ -146,7 +183,9 @@
       border-right: 1px solid var(--border);
     }
 
-    .stat:last-child { border-right: none; }
+    .stat:last-child {
+      border-right: none;
+    }
 
     .stat-value {
       font-size: 2.2rem;
@@ -206,9 +245,15 @@
     .feature-card::before {
       content: '';
       position: absolute;
-      top: 0; left: 0; right: 0;
+      top: 0;
+      left: 0;
+      right: 0;
       height: 2px;
-      background: linear-gradient(90deg, var(--primary), var(--accent));
+      background: linear-gradient(
+        90deg,
+        var(--primary),
+        var(--accent)
+      );
       opacity: 0;
       transition: opacity var(--transition);
     }
@@ -219,7 +264,9 @@
       box-shadow: 0 20px 60px rgba(0,0,0,0.4);
     }
 
-    .feature-card:hover::before { opacity: 1; }
+    .feature-card:hover::before {
+      opacity: 1;
+    }
 
     .feature-icon {
       width: 48px;
@@ -232,12 +279,29 @@
       margin-bottom: 20px;
     }
 
-    .icon-purple { background: rgba(124,92,252,0.15); }
-    .icon-cyan   { background: rgba(0,212,255,0.12); }
-    .icon-green  { background: rgba(0,233,106,0.12); }
-    .icon-orange { background: rgba(255,176,58,0.12); }
-    .icon-pink   { background: rgba(255,74,110,0.12); }
-    .icon-blue   { background: rgba(59,130,246,0.12); }
+    .icon-purple {
+      background: rgba(124,92,252,0.15);
+    }
+
+    .icon-cyan {
+      background: rgba(0,212,255,0.12);
+    }
+
+    .icon-green {
+      background: rgba(0,233,106,0.12);
+    }
+
+    .icon-orange {
+      background: rgba(255,176,58,0.12);
+    }
+
+    .icon-pink {
+      background: rgba(255,74,110,0.12);
+    }
+
+    .icon-blue {
+      background: rgba(59,130,246,0.12);
+    }
 
     .feature-title {
       font-size: 1.1rem;
@@ -304,7 +368,11 @@
     }
 
     .cta-box {
-      background: linear-gradient(135deg, rgba(124,92,252,0.16), rgba(124,92,252,0.05));
+      background: linear-gradient(
+        135deg,
+        rgba(124,92,252,0.16),
+        rgba(124,92,252,0.05)
+      );
       border: 1px solid rgba(124,92,252,0.32);
       border-radius: 28px;
       padding: 72px 40px;
@@ -317,11 +385,16 @@
     .cta-box::before {
       content: '';
       position: absolute;
-      top: -100px; left: 50%;
+      top: -100px;
+      left: 50%;
       transform: translateX(-50%);
       width: 400px;
       height: 400px;
-      background: radial-gradient(circle, rgba(124,92,252,0.2), transparent 60%);
+      background: radial-gradient(
+        circle,
+        rgba(124,92,252,0.2),
+        transparent 60%
+      );
       pointer-events: none;
     }
 
@@ -347,47 +420,91 @@
     }
 
     @media (max-width: 900px) {
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
-      .stat:nth-child(2) { border-right: none; }
-      .stat:nth-child(3) { border-top: 1px solid var(--border); padding-top: 24px; margin-top: 0; }
-      .stat:nth-child(4) { border-top: 1px solid var(--border); border-right: none; }
-      .steps-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .stat:nth-child(2) {
+        border-right: none;
+      }
+
+      .stat:nth-child(3) {
+        border-top: 1px solid var(--border);
+        padding-top: 24px;
+        margin-top: 0;
+      }
+
+      .stat:nth-child(4) {
+        border-top: 1px solid var(--border);
+        border-right: none;
+      }
+
+      .steps-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
 
     @media (max-width: 640px) {
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
-      .steps-grid { grid-template-columns: 1fr; }
-      .hero-title { font-size: 2.4rem; }
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .steps-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-title {
+        font-size: 2.4rem;
+      }
     }
   </style>
 </head>
+
 <body>
 
   <!-- NAVBAR -->
   <nav class="navbar">
     <div class="navbar-inner">
+
       <a href="index.html" class="logo">
         <span class="logo-icon">Z</span>
         Zploy
       </a>
+
       <div class="nav-links hide-mobile">
         <a href="#features" class="nav-link">Features</a>
         <a href="#como-funciona" class="nav-link">Como funciona</a>
       </div>
+
       <div class="flex gap-8">
-        <a href="login.html" class="btn btn-ghost btn-sm" data-auth-action="login">Entrar</a>
-        <a href="login.html?tab=register" class="btn btn-primary btn-sm" data-auth-action="register">Começar gratis</a>
-        <a href="dashboard.html" class="btn btn-primary btn-sm" data-auth-action="panel" style="display:none;">Ir para o Painel</a>
+        <a
+          href="login.html"
+          class="btn btn-ghost btn-sm"
+          data-auth-action="login"
+        >
+          Entrar
+        </a>
+
+        <a
+          href="dashboard.html"
+          class="btn btn-primary btn-sm"
+          data-auth-action="panel"
+        >
+          Ir para o Painel
+        </a>
       </div>
+
     </div>
   </nav>
 
   <!-- HERO -->
   <section class="hero">
+
     <div class="hero-bg"></div>
     <div class="hero-grid"></div>
 
     <div class="hero-content container">
+
       <div class="hero-eyebrow">
         Deploy automático com Docker
       </div>
@@ -398,169 +515,461 @@
       </h1>
 
       <p class="hero-subtitle">
-          Zploy é uma plataforma open-source de deploy automático que transforma o seu repositório GitHub em uma aplicação rodando com Docker — com apenas um clique.      </p>
+        Zploy é uma plataforma open-source de deploy automático que transforma
+        o seu repositório GitHub em uma aplicação rodando com Docker —
+        com apenas um clique.
+      </p>
 
       <div class="hero-actions">
-        <a href="login.html?tab=register" class="btn btn-primary btn-lg" data-auth-action="register">
-          Comecar agora, e gratis
+
+        <a
+          href="dashboard.html"
+          class="btn btn-primary btn-lg"
+          data-auth-action="panel"
+        >
+          Ir para o Dashboard
         </a>
-        <a href="dashboard.html" class="btn btn-secondary btn-lg" data-auth-action="panel">
-          Ver o painel
-        </a>
+
       </div>
 
       <div class="hero-terminal">
+
         <div class="terminal-mock">
+
           <div class="terminal-mock-header">
+
             <div class="terminal-dots">
               <span class="dot-red"></span>
-              <span class="dot-yellow" style="margin-left:6px;"></span>
-              <span class="dot-green" style="margin-left:6px;"></span>
+              <span
+                class="dot-yellow"
+                style="margin-left:6px;"
+              ></span>
+              <span
+                class="dot-green"
+                style="margin-left:6px;"
+              ></span>
             </div>
-            <span style="font-size:0.8rem;color:var(--text-muted);margin-left:8px;">zploy — terminal</span>
+
+            <span
+              style="
+                font-size:0.8rem;
+                color:var(--text-muted);
+                margin-left:8px;
+              "
+            >
+              zploy — terminal
+            </span>
+
           </div>
+
           <div class="terminal-mock-body">
-            <div><span class="t-dim">$</span> <span class="t-cmd">zploy deploy --repo https://github.com/user/minha-api</span></div>
-            <div><span class="t-dim">›</span> <span class="t-yellow">Clonando repositório...</span></div>
-            <div><span class="t-dim">›</span> <span class="t-yellow">Detectando tecnologia: </span><span class="t-purple">Node.js</span></div>
-            <div><span class="t-dim">›</span> <span class="t-yellow">Gerando Dockerfile...</span></div>
-            <div><span class="t-dim">›</span> <span class="t-cyan">Construindo imagem Docker: </span><span class="t-cmd">zploy-app-a3f2c1</span></div>
-            <div><span class="t-green">Deploy concluído com sucesso.</span></div>
-            <div><span class="t-green">Sua aplicacao esta em: </span><span class="t-cyan">http://minha-api.zploy.localhost</span></div>
+
+            <div>
+              <span class="t-dim">$</span>
+              <span class="t-cmd">
+                zploy deploy --repo https://github.com/user/minha-api
+              </span>
+            </div>
+
+            <div>
+              <span class="t-dim">›</span>
+              <span class="t-yellow">
+                Clonando repositório...
+              </span>
+            </div>
+
+            <div>
+              <span class="t-dim">›</span>
+              <span class="t-yellow">
+                Detectando tecnologia:
+              </span>
+              <span class="t-purple">
+                Node.js
+              </span>
+            </div>
+
+            <div>
+              <span class="t-dim">›</span>
+              <span class="t-yellow">
+                Gerando Dockerfile...
+              </span>
+            </div>
+
+            <div>
+              <span class="t-dim">›</span>
+              <span class="t-cyan">
+                Construindo imagem Docker:
+              </span>
+              <span class="t-cmd">
+                zploy-app-a3f2c1
+              </span>
+            </div>
+
+            <div>
+              <span class="t-green">
+                Deploy concluído com sucesso.
+              </span>
+            </div>
+
+            <div>
+              <span class="t-green">
+                Sua aplicacao esta em:
+              </span>
+              <span class="t-cyan">
+                http://minha-api.zploy.localhost
+              </span>
+            </div>
+
           </div>
+
         </div>
+
       </div>
+
     </div>
+
   </section>
 
   <!-- STATS STRIP -->
   <div class="stats-strip">
+
     <div class="stats-grid">
+
       <div class="stat">
-        <div class="stat-value text-gradient">< 60s</div>
-        <div class="stat-label">Tempo médio de deploy</div>
+        <div class="stat-value text-gradient">
+          &lt; 60s
+        </div>
+        <div class="stat-label">
+          Tempo médio de deploy
+        </div>
       </div>
+
       <div class="stat">
-        <div class="stat-value text-gradient">Node + Python</div>
-        <div class="stat-label">Tecnologias suportadas</div>
+        <div class="stat-value text-gradient">
+          Node + Python
+        </div>
+        <div class="stat-label">
+          Tecnologias suportadas
+        </div>
       </div>
+
       <div class="stat">
-         <div class="stat-value text-gradient">Docker</div>
-         <div class="stat-label">Execução em containers</div>
+        <div class="stat-value text-gradient">
+          Docker
+        </div>
+        <div class="stat-label">
+          Execução em containers
+        </div>
       </div>
+
       <div class="stat">
-        <div class="stat-value text-gradient">Logs</div>
-        <div class="stat-label">Acompanhamento do deploy</div>
+        <div class="stat-value text-gradient">
+          Logs
+        </div>
+        <div class="stat-label">
+          Acompanhamento do deploy
+        </div>
       </div>
+
     </div>
+
   </div>
 
   <!-- FEATURES -->
   <section class="features-section" id="features">
+
     <div class="container">
+
       <div class="section-header">
-        <span class="section-label">Features</span>
-        <h2 class="section-title">Tudo que você precisa para<br>ir do código ao ar</h2>
-        <p class="section-subtitle">Configurado pra você. Sem YAML manual. Sem infra para manter.</p>
+
+        <span class="section-label">
+          Features
+        </span>
+
+        <h2 class="section-title">
+          Tudo que você precisa para<br>
+          ir do código ao ar
+        </h2>
+
+        <p class="section-subtitle">
+          Configurado pra você. Sem YAML manual.
+          Sem infra para manter.
+        </p>
+
       </div>
 
-      <div class="grid-3" style="gap:20px">
+      <div
+        class="grid-3"
+        style="gap:20px"
+      >
+
         <div class="feature-card">
-          <div class="feature-icon icon-purple">D</div>
-          <div class="feature-title">Deploy com Git Clone</div>
-          <p class="feature-desc">Cole o link do seu repositório público e nós cuidamos do resto. Clone, build e deploy automático.</p>
+
+          <div class="feature-icon icon-purple">
+            D
+          </div>
+
+          <div class="feature-title">
+            Deploy com Git Clone
+          </div>
+
+          <p class="feature-desc">
+            Cole o link do seu repositório público e nós cuidamos do resto.
+            Clone, build e deploy automático.
+          </p>
+
         </div>
+
         <div class="feature-card">
-          <div class="feature-icon icon-cyan">C</div>
-          <div class="feature-title">Docker Automático</div>
-          <p class="feature-desc">Detectamos a tecnologia (Node.js ou Python) e geramos o Dockerfile ideal sem você precisar escrever uma linha.</p>
+
+          <div class="feature-icon icon-cyan">
+            C
+          </div>
+
+          <div class="feature-title">
+            Docker Automático
+          </div>
+
+          <p class="feature-desc">
+            Detectamos a tecnologia (Node.js ou Python) e geramos o
+            Dockerfile ideal sem você precisar escrever uma linha.
+          </p>
+
         </div>
+
         <div class="feature-card">
-          <div class="feature-icon icon-green">L</div>
-          <div class="feature-title">Logs de Deploy</div>
-          <p class="feature-desc">Acompanhe o processo de clone, build e execução da aplicação diretamente pelo painel.</p>
+
+          <div class="feature-icon icon-green">
+            L
+          </div>
+
+          <div class="feature-title">
+            Logs de Deploy
+          </div>
+
+          <p class="feature-desc">
+            Acompanhe o processo de clone, build e execução da aplicação
+            diretamente pelo painel.
+          </p>
+
         </div>
+
         <div class="feature-card">
-          <div class="feature-icon icon-orange">E</div>
-          <div class="feature-title">Variáveis de Ambiente</div>
-          <p class="feature-desc">Gerencie variáveis de ambiente pela interface. Elas são armazenadas de forma segura e injetadas no container automaticamente.</p>
+
+          <div class="feature-icon icon-orange">
+            E
+          </div>
+
+          <div class="feature-title">
+            Variáveis de Ambiente
+          </div>
+
+          <p class="feature-desc">
+            Gerencie variáveis de ambiente pela interface.
+            Elas são armazenadas de forma segura e injetadas no
+            container automaticamente.
+          </p>
+
         </div>
+
         <div class="feature-card">
-          <div class="feature-icon icon-pink">C</div>
-          <div class="feature-title">Controle da Aplicação</div>
-          <p class="feature-desc">Inicie novos deploys e pare a aplicação diretamente pelo painel, com acompanhamento do status.</p>
+
+          <div class="feature-icon icon-pink">
+            C
+          </div>
+
+          <div class="feature-title">
+            Controle da Aplicação
+          </div>
+
+          <p class="feature-desc">
+            Inicie novos deploys e pare a aplicação diretamente pelo painel,
+            com acompanhamento do status.
+          </p>
+
         </div>
+
         <div class="feature-card">
-          <div class="feature-icon icon-blue">S</div>
-          <div class="feature-title">Variáveis de Ambiente</div>
-          <p class="feature-desc">Gerencie ENV vars de forma segura pela interface. Elas são injetadas no container automaticamente.</p>
+
+          <div class="feature-icon icon-blue">
+            S
+          </div>
+
+          <div class="feature-title">
+            Variáveis de Ambiente
+          </div>
+
+          <p class="feature-desc">
+            Gerencie ENV vars de forma segura pela interface.
+            Elas são injetadas no container automaticamente.
+          </p>
+
         </div>
+
       </div>
+
     </div>
+
   </section>
 
   <!-- HOW IT WORKS -->
-  <section class="how-section" id="como-funciona">
+  <section
+    class="how-section"
+    id="como-funciona"
+  >
+
     <div class="container">
+
       <div class="section-header">
-        <span class="section-label">Como funciona</span>
-        <h2 class="section-title">Da ideia ao ar em 4 passos</h2>
+
+        <span class="section-label">
+          Como funciona
+        </span>
+
+        <h2 class="section-title">
+          Da ideia ao ar em 4 passos
+        </h2>
+
       </div>
 
       <div class="steps-grid">
+
         <div class="step">
-          <div class="step-number">1</div>
-          <div class="step-title">Crie um App</div>
-          <p class="step-desc">Dê um nome para o seu projeto na plataforma. Simples assim.</p>
+
+          <div class="step-number">
+            1
+          </div>
+
+          <div class="step-title">
+            Crie um App
+          </div>
+
+          <p class="step-desc">
+            Dê um nome para o seu projeto na plataforma.
+            Simples assim.
+          </p>
+
         </div>
+
         <div class="step">
-          <div class="step-number">2</div>
-          <div class="step-title">Cole o repositório</div>
-          <p class="step-desc">Informe a URL do seu repositório no GitHub e dispare o deploy.</p>
+
+          <div class="step-number">
+            2
+          </div>
+
+          <div class="step-title">
+            Cole o repositório
+          </div>
+
+          <p class="step-desc">
+            Informe a URL do seu repositório no GitHub
+            e dispare o deploy.
+          </p>
+
         </div>
+
         <div class="step">
-          <div class="step-number">3</div>
-          <div class="step-title">Acompanhe os logs</div>
-          <p class="step-desc">Veja em tempo real o processo de build e deploy diretamente no painel.</p>
+
+          <div class="step-number">
+            3
+          </div>
+
+          <div class="step-title">
+            Acompanhe os logs
+          </div>
+
+          <p class="step-desc">
+            Veja em tempo real o processo de build e deploy
+            diretamente no painel.
+          </p>
+
         </div>
+
         <div class="step">
-          <div class="step-number">4</div>
-          <div class="step-title">Acesse sua URL</div>
-          <p class="step-desc">Sua aplicação estará rodando em um container Docker e disponível pela URL fornecida pelo Zploy.</p>
+
+          <div class="step-number">
+            4
+          </div>
+
+          <div class="step-title">
+            Acesse sua URL
+          </div>
+
+          <p class="step-desc">
+            Sua aplicação estará rodando em um container Docker
+            e disponível pela URL fornecida pelo Zploy.
+          </p>
+
         </div>
+
       </div>
+
     </div>
+
   </section>
 
   <!-- CTA -->
   <section class="cta-section">
+
     <div class="container">
+
       <div class="cta-box">
-        <h2 class="cta-title">Pronto para fazer o <br><span class="text-gradient">primeiro deploy?</span></h2>
-        <p class="cta-subtitle">Crie sua conta, configure seu app e faça seu primeiro deploy em poucos passos.</p>
-        <a href="login.html?tab=register" class="btn btn-primary btn-lg" data-auth-action="register">
-          Criar conta gratis
+
+        <h2 class="cta-title">
+          Pronto para fazer o <br>
+          <span class="text-gradient">
+            primeiro deploy?
+          </span>
+        </h2>
+
+        <p class="cta-subtitle">
+          Acesse o painel e configure seu app
+          para fazer seu primeiro deploy.
+        </p>
+
+        <a
+          href="dashboard.html"
+          class="btn btn-primary btn-lg"
+          data-auth-action="panel"
+        >
+          Ir para o Dashboard
         </a>
+
       </div>
+
     </div>
+
   </section>
 
   <!-- FOOTER -->
   <footer class="footer">
-    <p>Zploy — Plataforma de Deploy Automático • TCC • 2025</p>
+    <p>
+      Zploy — Plataforma de Deploy Automático • TCC • 2025
+    </p>
   </footer>
 
   <script src="js/api.js"></script>
+
   <script>
     async function bootstrapLanding() {
       const mode = await getAuthMode();
-      const loginButtons = document.querySelectorAll('a[data-auth-action="login"], a[data-auth-action="register"]');
-      const panelButtons = document.querySelectorAll('a[data-auth-action="panel"]');
-      const panelTopButton = document.querySelector('a[data-auth-action="panel"][class*="btn-sm"]');
+
+      const loginButtons = document.querySelectorAll(
+        'a[data-auth-action="login"]'
+      );
+
+      const panelButtons = document.querySelectorAll(
+        'a[data-auth-action="panel"]'
+      );
 
       if (!mode.authEnabled) {
         loginButtons.forEach((button) => {
+          button.style.display = 'none';
+        });
+
+        panelButtons.forEach((button) => {
           button.href = 'dashboard.html';
+          button.style.display = '';
         });
       }
 
@@ -568,17 +977,17 @@
         loginButtons.forEach((button) => {
           button.style.display = 'none';
         });
+
         panelButtons.forEach((button) => {
           button.style.display = '';
+          button.href = 'dashboard.html';
         });
-
-        if (panelTopButton) {
-          panelTopButton.textContent = 'Painel';
-        }
       }
     }
 
     bootstrapLanding();
   </script>
+
 </body>
 </html>
+```

@@ -4,7 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard — Zploy</title>
-  <link rel="stylesheet" href="css/main.css">
+
+  <link rel="stylesheet" href="/css/main.css">
+
   <style>
     .page-layout {
       display: block;
@@ -60,12 +62,14 @@
       text-decoration: none;
     }
 
-    .topbar-link:hover, .topbar-link.active {
+    .topbar-link:hover,
+    .topbar-link.active {
       background: var(--surface-hover);
       color: var(--text);
     }
 
     /* ===== MAIN ===== */
+
     .main {
       overflow-y: auto;
     }
@@ -92,6 +96,7 @@
     }
 
     /* ===== APPS GRID ===== */
+
     .apps-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -114,7 +119,7 @@
     .app-card:hover {
       border-color: var(--border-strong);
       transform: translateY(-2px);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
     }
 
     .app-card-top {
@@ -189,7 +194,7 @@
     .add-app-card:hover {
       border-color: var(--primary);
       color: var(--primary);
-      background: rgba(124,92,252,0.04);
+      background: rgba(124, 92, 252, 0.04);
     }
 
     .add-icon {
@@ -203,8 +208,13 @@
       font-size: 1.4rem;
     }
 
-    /* ===== MODAL DE CRIAR APP ===== */
-    .modal-form { display: flex; flex-direction: column; gap: 20px; }
+    /* ===== MODAL ===== */
+
+    .modal-form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
 
     .modal-actions {
       display: flex;
@@ -212,228 +222,216 @@
       justify-content: flex-end;
       margin-top: 8px;
     }
-  </style>
-</head>
-<body>
 
-  <div class="page-layout">
-    <header class="topbar">
-      <div class="topbar-left">
-        <span class="logo-icon">D</span>
-        Dashboard
-      </div>
-      <nav class="topbar-nav">
-        <a class="topbar-link active" href="dashboard.html">Dashboard</a>
-        <button class="btn btn-ghost btn-sm" onclick="Auth.logout()">Sair</button>
-      </nav>
-    </header>
-
-    <!-- MAIN -->
-    <main class="main">
-      <div class="page-header">
-        <div class="flex justify-between items-start flex-wrap gap-16">
-          <div>
-            <h1 class="page-title fade-in-up">Meus Apps</h1>
-            <p class="page-subtitle fade-in-up fade-in-up-delay-1">Gerencie suas aplicações e deploys.</p>
-          </div>
-          <button class="btn btn-primary fade-in-up fade-in-up-delay-2" onclick="openModal()">
-            + Novo App
-          </button>
-        </div>
-      </div>
-
-      <div class="page-content">
-        <div class="apps-grid" id="apps-grid">
-          <!-- skeleton enquanto carrega -->
-          <div class="skeleton" style="height:160px;border-radius:var(--radius)"></div>
-          <div class="skeleton" style="height:160px;border-radius:var(--radius)"></div>
-          <div class="skeleton" style="height:160px;border-radius:var(--radius)"></div>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <!-- MODAL CRIAR APP -->
-  <div class="modal-overlay" id="modal-overlay" onclick="closeModalOnOverlay(event)">
-    <div class="modal">
-      <h2 class="modal-title">Novo App</h2>
-      <p class="modal-subtitle">Dê um nome único para a sua aplicação. Você poderá configurar o deploy na próxima tela.</p>
-      <div class="modal-form">
-        <div class="field">
-          <label class="label" for="app-name">Nome do App</label>
-          <input class="input" type="text" id="app-name" placeholder="ex: minha-api-node" autofocus>
-          <span style="font-size:0.78rem;color:var(--text-muted)">Use apenas letras minúsculas, números e hífens.</span>
-        </div>
-        <div id="create-error" class="error-msg"></div>
-        <div class="modal-actions">
-          <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-          <button class="btn btn-primary" id="btn-create" onclick="createApp()">Criar App</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <style>
     .error-msg {
       background: var(--danger-surface);
-      border: 1px solid rgba(255,74,110,0.3);
+      border: 1px solid rgba(255, 74, 110, 0.3);
       border-radius: var(--radius-sm);
       padding: 12px 16px;
       font-size: 0.88rem;
       color: var(--danger);
       display: none;
     }
-    .error-msg.visible { display: block; }
+
+    .error-msg.visible {
+      display: block;
+    }
+
     .loading {
-      display: inline-block; width:14px; height:14px;
-      border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
-      border-radius: 50%; animation: spin 0.7s linear infinite;
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
   </style>
+</head>
 
-  <script src="js/api.js"></script>
-  <script>
-    async function bootstrap() {
-      const allowed = await requireAuth();
-      if (!allowed) return;
-      loadApps();
-    }
+<body>
 
-    async function loadApps() {
-      const grid = document.getElementById('apps-grid');
-      const { ok, data } = await Apps.list();
-      const debugMode = new URLSearchParams(window.location.search).get('debug') === '1';
+  <div class="page-layout">
 
-      const apps = Array.isArray(data) ? data : [];
+    <!-- TOPBAR -->
 
-      if (!ok && apps.length === 0) {
-        const details = data?.error ? escHtml(data.error) : '';
-        const subtitle = details
-          ? 'Nao foi possivel carregar seus apps agora.'
-          : 'Voce ainda nao criou nenhum app.';
-        grid.innerHTML = `
-          <div class="empty-state">
-            <p class="empty-title">Nenhum app para exibir agora</p>
-            <p style="color:var(--text-muted);font-size:0.9rem;margin-top:6px;">${subtitle}</p>
-            ${(debugMode && details) ? `<p style="color:var(--text-muted);font-size:0.82rem;margin-top:6px;">Detalhe: ${details}</p>` : ''}
-            <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-              <button class="btn btn-secondary" onclick="loadApps()">Tentar novamente</button>
-              <button class="btn btn-primary" onclick="openModal()">Criar App</button>
-            </div>
-          </div>`;
-        return;
-      }
+    <header class="topbar">
 
-      let html = '';
+      <div class="topbar-left">
+        <span class="logo-icon">D</span>
+        Dashboard
+      </div>
 
-      if (apps.length === 0) {
-        html = `
-          <div class="add-app-card" onclick="openModal()">
-            <div class="add-icon">+</div>
-            <div style="font-weight:600;font-size:0.95rem;">Nenhum app criado</div>
-            <div style="font-size:0.85rem;">Clique para criar seu primeiro app</div>
-          </div>`;
-      } else {
-        html = apps.map(app => {
-          const initials = app.name.slice(0,2).toUpperCase();
-          const displayUrl = resolveDashboardAppUrl(app.url || '');
-          return `
-            <a href="app.html?id=${app.id}" class="app-card fade-in-up">
-              <div class="app-card-top">
-                <div class="flex items-center gap-12">
-                  <div class="app-icon">${initials}</div>
-                  <div>
-                    <div class="app-card-name">${escHtml(app.name)}</div>
-                    <div class="app-card-url">${escHtml(displayUrl)}</div>
-                  </div>
-                </div>
-                ${statusBadge(app.status)}
-              </div>
-              <div class="app-card-footer">
-                <span>Criado em ${formatDate(app.createdAt)}</span>
-                <span style="color:var(--primary);font-weight:600;">Ver →</span>
-              </div>
-            </a>`;
-        }).join('') + `
-          <div class="add-app-card" onclick="openModal()">
-            <div class="add-icon">+</div>
-            <div style="font-weight:600;font-size:0.95rem;">Novo App</div>
-          </div>`;
-      }
+      <nav class="topbar-nav">
 
-      grid.innerHTML = html;
-    }
+        <a
+          class="topbar-link active"
+          href="/dashboard.html"
+        >
+          Dashboard
+        </a>
 
-    function escHtml(v) {
-      return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
+        <button
+          class="btn btn-ghost btn-sm"
+          id="btn-logout"
+          type="button"
+        >
+          Sair
+        </button>
 
-    function resolveDashboardAppUrl(rawUrl) {
-      if (!rawUrl) return '';
+      </nav>
 
-      try {
-        const parsed = new URL(rawUrl);
-        if (!parsed.hostname.endsWith('.localtest.me') || parsed.port) {
-          return rawUrl;
-        }
+    </header>
 
-        const rememberedPort = window.localStorage.getItem('zployExposePort') || '8080';
-        parsed.port = rememberedPort;
-        return parsed.toString().replace(/\/$/, '');
-      } catch {
-        return rawUrl;
-      }
-    }
+    <!-- MAIN -->
 
-    function openModal() {
-      document.getElementById('modal-overlay').classList.add('active');
-      document.getElementById('app-name').focus();
-    }
+    <main class="main">
 
-    function closeModal() {
-      document.getElementById('modal-overlay').classList.remove('active');
-      document.getElementById('create-error').classList.remove('visible');
-      document.getElementById('app-name').value = '';
-    }
+      <div class="page-header">
 
-    function closeModalOnOverlay(e) {
-      if (e.target === document.getElementById('modal-overlay')) closeModal();
-    }
+        <div class="flex justify-between items-start flex-wrap gap-16">
 
-    async function createApp() {
-      const name = document.getElementById('app-name').value.trim();
-      const btn = document.getElementById('btn-create');
-      const errEl = document.getElementById('create-error');
+          <div>
 
-      if (!name) {
-        errEl.textContent = 'Informe o nome do App.';
-        errEl.classList.add('visible');
-        return;
-      }
+            <h1 class="page-title fade-in-up">
+              Meus Apps
+            </h1>
 
-      btn.innerHTML = '<span class="loading"></span> Criando...';
-      btn.disabled = true;
-      errEl.classList.remove('visible');
+            <p class="page-subtitle fade-in-up fade-in-up-delay-1">
+              Gerencie suas aplicações e deploys.
+            </p>
 
-      const { ok, data } = await Apps.create(name);
+          </div>
 
-      if (ok && data.id) {
-        closeModal();
-        window.location.href = `app.html?id=${data.id}`;
-      } else {
-        errEl.textContent = data?.error || 'Erro ao criar app.';
-        errEl.classList.add('visible');
-        btn.innerHTML = 'Criar App';
-        btn.disabled = false;
-      }
-    }
+          <button
+            class="btn btn-primary fade-in-up fade-in-up-delay-2"
+            id="btn-new-app"
+            type="button"
+          >
+            + Novo App
+          </button>
 
-    document.getElementById('app-name').addEventListener('keydown', e => {
-      if (e.key === 'Enter') createApp();
-    });
+        </div>
 
-    bootstrap();
-  </script>
+      </div>
+
+      <div class="page-content">
+
+        <div
+          class="apps-grid"
+          id="apps-grid"
+        >
+
+          <!-- SKELETON -->
+
+          <div
+            class="skeleton"
+            style="height:160px;border-radius:var(--radius)"
+          ></div>
+
+          <div
+            class="skeleton"
+            style="height:160px;border-radius:var(--radius)"
+          ></div>
+
+          <div
+            class="skeleton"
+            style="height:160px;border-radius:var(--radius)"
+          ></div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- MODAL CRIAR APP -->
+
+  <div
+    class="modal-overlay"
+    id="modal-overlay"
+  >
+
+    <div class="modal">
+
+      <h2 class="modal-title">
+        Novo App
+      </h2>
+
+      <p class="modal-subtitle">
+        Dê um nome único para a sua aplicação.
+        Você poderá configurar o deploy na próxima tela.
+      </p>
+
+      <div class="modal-form">
+
+        <div class="field">
+
+          <label
+            class="label"
+            for="app-name"
+          >
+            Nome do App
+          </label>
+
+          <input
+            class="input"
+            type="text"
+            id="app-name"
+            placeholder="ex: minha-api-node"
+            autocomplete="off"
+            autofocus
+          >
+
+          <span class="field-hint">
+            Use apenas letras minúsculas, números e hífens.
+          </span>
+
+        </div>
+
+        <div
+          id="create-error"
+          class="error-msg"
+        ></div>
+
+        <div class="modal-actions">
+
+          <button
+            class="btn btn-ghost"
+            id="btn-cancel-create"
+            type="button"
+          >
+            Cancelar
+          </button>
+
+          <button
+            class="btn btn-primary"
+            id="btn-create"
+            type="button"
+          >
+            Criar App
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- JAVASCRIPT EXTERNO -->
+
+  <script src="/js/api.js" defer></script>
+  <script src="/js/dashboard.js" defer></script>
+
 </body>
 </html>

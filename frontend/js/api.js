@@ -16,8 +16,10 @@ function clearSession() {
 
 function isAuthEnabledCached() {
   const cached = localStorage.getItem(AUTH_MODE_KEY);
+
   if (cached === 'false') return false;
   if (cached === 'true') return true;
+
   return null;
 }
 
@@ -27,6 +29,7 @@ async function getAuthMode() {
   try {
     const res = await fetch(`${API_URL}/config/public`);
     const data = await res.json();
+
     authModeCache = {
       authEnabled: data?.authEnabled !== false,
     };
@@ -36,16 +39,21 @@ async function getAuthMode() {
     };
   }
 
-  localStorage.setItem(AUTH_MODE_KEY, String(authModeCache.authEnabled));
+  localStorage.setItem(
+    AUTH_MODE_KEY,
+    String(authModeCache.authEnabled)
+  );
 
+  // Modo Local: usuário automático
   if (!authModeCache.authEnabled && !getToken()) {
-    setToken('study-mode');
+    setToken('local-mode');
   }
 
   return authModeCache;
 }
 
 function isLoggedIn() {
+  // No modo Local, o usuário é considerado autenticado
   if (isAuthEnabledCached() === false) {
     return true;
   }
@@ -56,10 +64,12 @@ function isLoggedIn() {
 async function requireAuth() {
   const mode = await getAuthMode();
 
+  // Modo Local não exige login
   if (!mode.authEnabled) {
     return true;
   }
 
+  // Modo Platform exige autenticação
   if (!isLoggedIn()) {
     window.location.href = 'login.html';
     return false;
@@ -80,12 +90,15 @@ function authHeaders(extra = {}) {
 
 async function parseJsonSafe(response) {
   const text = await response.text();
+
   if (!text) return {};
 
   try {
     return JSON.parse(text);
   } catch {
-    return { error: text.slice(0, 300) };
+    return {
+      error: text.slice(0, 300),
+    };
   }
 }
 
@@ -93,6 +106,7 @@ async function api(method, endpoint, body) {
   const mode = await getAuthMode();
 
   let res;
+
   try {
     res = await fetch(`${API_URL}${endpoint}`, {
       method,
@@ -100,104 +114,193 @@ async function api(method, endpoint, body) {
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch {
-    return { ok: false, status: 0, data: { error: 'API indisponivel. Verifique se o backend esta rodando.' } };
+    return {
+      ok: false,
+      status: 0,
+      data: {
+        error: 'API indisponivel. Verifique se o backend esta rodando.',
+      },
+    };
   }
 
   const data = await parseJsonSafe(res);
 
   if (res.status === 401) {
     clearSession();
+
     if (mode.authEnabled) {
       window.location.href = 'login.html';
     }
-    return;
+
+    return {
+      ok: false,
+      status: 401,
+      data,
+    };
   }
 
-  return { ok: res.ok, status: res.status, data };
+  return {
+    ok: res.ok,
+    status: res.status,
+    data,
+  };
 }
 
 const Auth = {
   async login(identifier, password) {
     const mode = await getAuthMode();
+
+    // No modo Local não existe login real
     if (!mode.authEnabled) {
-      setToken('study-mode');
-      return { ok: true, data: { token: 'study-mode', mode: 'study' } };
+      setToken('local-mode');
+
+      return {
+        ok: true,
+        data: {
+          token: 'local-mode',
+          mode: 'local',
+        },
+      };
     }
 
     let res;
+
     try {
       res = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, password }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          identifier,
+          password,
+        }),
       });
     } catch {
-      return { ok: false, data: { error: 'API indisponivel. Verifique se o backend esta rodando.' } };
+      return {
+        ok: false,
+        data: {
+          error: 'API indisponivel. Verifique se o backend esta rodando.',
+        },
+      };
     }
 
     const data = await parseJsonSafe(res);
+
     if (res.ok && data.token) {
       setToken(data.token);
-      return { ok: true, data };
+
+      return {
+        ok: true,
+        data,
+      };
     }
-    return { ok: false, data };
+
+    return {
+      ok: false,
+      data,
+    };
   },
 
   async register(email, username, password) {
     const mode = await getAuthMode();
+
+    // No modo Local não existe cadastro
     if (!mode.authEnabled) {
-      return { ok: true, data: { mode: 'study' } };
+      return {
+        ok: true,
+        data: {
+          mode: 'local',
+        },
+      };
     }
 
     let res;
+
     try {
       res = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, username, password }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          username,
+          password,
+        }),
       });
     } catch {
-      return { ok: false, data: { error: 'API indisponivel. Verifique se o backend esta rodando.' } };
+      return {
+        ok: false,
+        data: {
+          error: 'API indisponivel. Verifique se o backend esta rodando.',
+        },
+      };
     }
 
     const data = await parseJsonSafe(res);
-    return { ok: res.ok, data };
+
+    return {
+      ok: res.ok,
+      data,
+    };
   },
 
   logout() {
     const authEnabled = isAuthEnabledCached();
+
     clearSession();
+
+    // No modo Local, permanece no Dashboard
     if (authEnabled === false) {
-      setToken('study-mode');
+      setToken('local-mode');
       window.location.href = 'dashboard.html';
       return;
     }
 
+    // No modo Platform, volta para o login
     window.location.href = 'login.html';
-  }
+  },
 };
 
 const Apps = {
   list: () => api('GET', '/apps'),
-  create: (name) => api('POST', '/apps', { name }),
-  delete: (id) => api('DELETE', `/apps/${id}`),
+
+  create: (name) =>
+    api('POST', '/apps', {
+      name,
+    }),
+
+  delete: (id) =>
+    api('DELETE', `/apps/${id}`),
+
   deploy: (id, repositoryUrl, dockerfile) =>
     api('POST', `/apps/${id}/deploy`, {
       repositoryUrl,
       ...(dockerfile ? { dockerfile } : {}),
     }),
-  stop: (id) => api('POST', `/apps/${id}/stop`),
+
+  stop: (id) =>
+    api('POST', `/apps/${id}/stop`),
 };
 
-
 const Deploys = {
-  logs: (deployId) => api('GET', `/deploys/${deployId}/logs`),
+  logs: (deployId) =>
+    api('GET', `/deploys/${deployId}/logs`),
 };
 
 const Envs = {
-  list: (appId) => api('GET', `/apps/${appId}/envs`),
-  add: (appId, key, value) => api('POST', `/apps/${appId}/envs`, { key, value }),
-  delete: (appId, envId) => api('DELETE', `/apps/${appId}/envs/${envId}`),
+  list: (appId) =>
+    api('GET', `/apps/${appId}/envs`),
+
+  add: (appId, key, value) =>
+    api('POST', `/apps/${appId}/envs`, {
+      key,
+      value,
+    }),
+
+  delete: (appId, envId) =>
+    api('DELETE', `/apps/${appId}/envs/${envId}`),
 };
 
 // Helper: retorna ID de app da querystring (?id=...)
@@ -208,20 +311,27 @@ function getAppIdFromUrl() {
 // Helper: formata data
 function formatDate(isoStr) {
   if (!isoStr) return '—';
+
   return new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   }).format(new Date(isoStr));
 }
 
 // Helper: badge de status
 function statusBadge(status) {
   const map = {
-    running:  ['running', 'Running'],
+    running: ['running', 'Running'],
     building: ['building', 'Building'],
-    failed:   ['failed', 'Failed'],
-    pending:  ['pending', 'Pending'],
+    failed: ['failed', 'Failed'],
+    pending: ['pending', 'Pending'],
   };
-  const [cls, label] = map[status] || ['pending', status ?? '—'];
+
+  const [cls, label] =
+    map[status] || ['pending', status ?? '—'];
+
   return `<span class="badge badge-${cls}"><span class="dot"></span>${label}</span>`;
 }
