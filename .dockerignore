@@ -4,7 +4,6 @@ npm-debug.log
 .gitignore
 Dockerfile
 docker-compose.demo.yml
-kubernetes/manifests
 temp-deploys
 .vscode
 dist

@@ -13,8 +13,6 @@ ROTEIRO.md
 
 .vscode
 
-# Deploys temporários e manifests gerados em runtime
-kubernetes/manifests/*
-!kubernetes/manifests/.gitkeep
+
 temp-deploys/*
 !temp-deploys/.gitkeep

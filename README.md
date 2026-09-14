@@ -8,7 +8,7 @@ Zploy é uma plataforma de deploy local/protótipo inspirada em um PaaS, constru
 - CRUD de apps
 - Deploy assíncrono com fila Redis/BullMQ
 - Build de imagens Docker
-- Publicação local via Docker ou Kubernetes (quando disponível)
+- Publicação local via Docker
 - Logs de deploy
 - Webhook do GitHub para disparar deploys após push
 - Suporte a branch configurável por app
@@ -21,7 +21,6 @@ Zploy é uma plataforma de deploy local/protótipo inspirada em um PaaS, constru
 - Prisma + PostgreSQL
 - Redis + BullMQ
 - Docker
-- Kubernetes (opcional, local)
 
 ## Estrutura do projeto
 
@@ -30,7 +29,7 @@ Zploy é uma plataforma de deploy local/protótipo inspirada em um PaaS, constru
 - src/services: regras de negócio
 - src/workers/deployWorker.ts: worker de deploy
 - src/queues/deployQueue.ts: fila de deploys
-- src/utils: utilitários de Docker, Kubernetes e webhook
+- src/utils: utilitários de Docker, deploy e webhook
 - prisma/: schema e migrations do banco
 - frontend/: painel web atual (index, login, dashboard e app)
 
@@ -38,7 +37,6 @@ Zploy é uma plataforma de deploy local/protótipo inspirada em um PaaS, constru
 
 - Node.js 18+
 - Docker instalado e rodando
-- Kubernetes opcional para deploys no cluster
 
 ## Variáveis de ambiente
 
@@ -49,7 +47,6 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/tcc_db"
 JWT_SECRET="zploy-secret"
 GITHUB_WEBHOOK_SECRET=""
 AUTH_ENABLED="true"
-REQUIRE_KUBERNETES="false"
 ```
 
 `AUTH_ENABLED` controla o comportamento da autenticação:
@@ -57,10 +54,6 @@ REQUIRE_KUBERNETES="false"
 - `AUTH_ENABLED=true`: modo plataforma (login e registro ativos)
 - `AUTH_ENABLED=false`: modo estudo (sem login; dashboard direto com usuário local automático)
 
-`REQUIRE_KUBERNETES` controla o fallback do worker:
-
-- `REQUIRE_KUBERNETES=true`: não permite fallback para Docker local (deploy falha se Kubernetes estiver indisponível)
-- `REQUIRE_KUBERNETES=false`: fallback para Docker local habilitado
 
 Perfis prontos no repositório:
 
@@ -100,12 +93,10 @@ Resumo dos comandos simplificados:
 
 - `npm run up`: sobe modo local padrão (API + worker + postgres + redis)
 - `npm run down`: encerra modo local padrão
-- `npm run up:k8s`: sobe modo Kubernetes obrigatório
-- `npm run down:k8s`: encerra modo Kubernetes e para o Minikube
 - `npm run up:demo`: sobe modo demo totalmente em containers
 - `npm run down:demo`: encerra modo demo e limpa os containers da demo
 
-Compatibilidade: os comandos antigos (`start`, `start:k8s`, `demo:up`, etc.) continuam funcionando.
+Os comandos `start`, `demo:up` e demais scripts continuam disponíveis para execução direta.
 
 ### Modo local padrão
 
@@ -133,43 +124,6 @@ Se quiser rodar os processos separadamente, ainda é possível usar:
 npm run dev
 npm run worker
 ```
-
-### Modo Kubernetes completo (sem fallback)
-
-Para subir o Minikube automaticamente e iniciar a plataforma exigindo Kubernetes:
-
-```bash
-npm run up:k8s
-```
-
-Esse comando:
-
-- roda `minikube start`
-- habilita addons `ingress` e `metrics-server`
-- inicia o Zploy com `REQUIRE_KUBERNETES=true`
-
-Para acessar apps publicados no Kubernetes de forma estável no Windows (driver Docker), rode em outro terminal:
-
-```bash
-npm run k8s:expose
-```
-
-Esse comando mantém o `kubectl port-forward` com reconexão automática se a sessão cair.
-Se a porta `8080` estiver ocupada, ele seleciona automaticamente a próxima porta livre e mostra a URL no terminal.
-
-Depois, abra a aplicação em:
-
-```bash
-http://<nome-do-app>.localtest.me:8080
-```
-
-Exemplo:
-
-```bash
-http://app1.localtest.me:8080
-```
-
-Observação: o domínio de ingress é configurável por `KUBERNETES_INGRESS_DOMAIN` e o padrão agora é `localtest.me`.
 
 ### Modos de uso
 
@@ -229,8 +183,7 @@ Se quiser, você também pode usar a secret `GITHUB_WEBHOOK_SECRET` para validar
 ## Observações
 
 - O projeto ainda é um protótipo local e pode precisar de ajustes para ambiente real.
-- Para deploys mais completos em Kubernetes, o cluster precisa estar disponível.
-- Em alguns cenários, o deploy pode cair para fallback com Docker local.
+- Os deploys das aplicações são executados em containers Docker.
 
 ## Próximos melhorias sugeridas
 

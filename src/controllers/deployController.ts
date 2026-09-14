@@ -3,22 +3,16 @@ import prisma from "../config/prisma";
 import { addDeployJob } from "../queues/deployQueue";
 import { createDeployLog, getDeployLogs } from "../services/deployLogService";
 import { AuthRequest } from "../middlewares/authMiddleware";
-import { exec, execFile } from "node:child_process";
-import { promisify } from "util";
 import { DeploymentProvider } from "../services/deployment/deploymentProvider";
-import { KubernetesProvider } from "../services/deployment/kubernetesProvider";
 import { DockerProvider } from "../services/deployment/dockerProvider";
 import { isValidGithubRepositoryUrl } from "../utils/githubWebhook";
-
-const execAsync = promisify(exec);
-const execFileAsync = promisify(execFile);
 
 export async function startDeploy(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
     const { repositoryUrl, dockerfile, deploymentBranch } = req.body;
 
-        if (
+    if (
       typeof repositoryUrl !== "string" ||
       !isValidGithubRepositoryUrl(repositoryUrl)
     ) {
@@ -27,7 +21,7 @@ export async function startDeploy(req: AuthRequest, res: Response) {
       });
     }
 
-        if (
+    if (
       deploymentBranch !== undefined &&
       (
         typeof deploymentBranch !== "string" ||
@@ -41,7 +35,7 @@ export async function startDeploy(req: AuthRequest, res: Response) {
       });
     }
 
-        if (
+    if (
       dockerfile !== undefined &&
       (
         typeof dockerfile !== "string" ||
@@ -80,8 +74,9 @@ export async function startDeploy(req: AuthRequest, res: Response) {
       });
     }
 
-    // Checagem fail-fast (UX): não substitui o lock distribuído do worker, apenas evita
-    // enfileirar deploys óbvios em duplicidade. Corridas ainda são resolvidas pelo Redis lock.
+    // Checagem fail-fast (UX): não substitui o lock distribuído do worker,
+    // apenas evita enfileirar deploys óbvios em duplicidade.
+    // Corridas ainda são resolvidas pelo Redis lock.
     const ongoingDeploy = await prisma.deploy.findFirst({
       where: {
         appId: app.id,
@@ -118,7 +113,10 @@ export async function startDeploy(req: AuthRequest, res: Response) {
       message: "Deploy criado com status pending.",
     });
 
-    const branchToUse = deploymentBranch?.toString().trim() || (app as { deploymentBranch?: string }).deploymentBranch || 'main';
+    const branchToUse =
+      deploymentBranch?.toString().trim() ||
+      (app as { deploymentBranch?: string }).deploymentBranch ||
+      "main";
 
     await prisma.app.update({
       where: {
@@ -131,7 +129,13 @@ export async function startDeploy(req: AuthRequest, res: Response) {
       },
     });
 
-    await addDeployJob(app.id, repositoryUrl, newDeploy.id, dockerfile, branchToUse);
+    await addDeployJob(
+      app.id,
+      repositoryUrl,
+      newDeploy.id,
+      dockerfile,
+      branchToUse
+    );
 
     await createDeployLog({
       deployId: newDeploy.id,
@@ -236,14 +240,7 @@ export async function stopApp(req: AuthRequest, res: Response) {
       },
     });
 
-    const isKubernetes =
-      lastDeploy?.deployLogs.some((log) => log.message.includes("Kubernetes")) ||
-      (app.url ? !app.url.includes("localhost:") : false) ||
-      process.env.REQUIRE_KUBERNETES === "true";
-
-    const provider: DeploymentProvider = isKubernetes
-      ? new KubernetesProvider()
-      : new DockerProvider();
+    const provider: DeploymentProvider = new DockerProvider();
 
     try {
       await provider.stop(app.id);
@@ -253,9 +250,7 @@ export async function stopApp(req: AuthRequest, res: Response) {
           deployId: lastDeploy.id,
           type: "runtime",
           level: "info",
-          message: isKubernetes
-            ? "Aplicação parada no Kubernetes com sucesso."
-            : `Container derrubado com sucesso: zploy-${app.id}`,
+          message: `Container derrubado com sucesso: zploy-${app.id}`,
         });
       }
     } catch (stopError) {
@@ -283,17 +278,6 @@ export async function stopApp(req: AuthRequest, res: Response) {
         url: null,
       },
     });
-
-    if (lastDeploy) {
-      await prisma.deploy.update({
-        where: {
-          id: lastDeploy.id,
-        },
-        data: {
-          status: "stopped",
-        },
-      });
-    }
 
     return res.json({
       message: "Aplicação derrubada com sucesso.",

@@ -201,13 +201,7 @@
     .danger-title { color: var(--danger); font-weight: 700; margin-bottom: 6px; }
     .danger-desc { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 16px; }
 
-    /* STATUS CARD */
-    .k8s-status-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 24px 28px;
-    }
+
 
     .loading { display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite; }
     @keyframes spin { to { transform:rotate(360deg); } }
@@ -273,26 +267,6 @@
             </div>
           </div>
 
-          <div class="k8s-status-card">
-            <div class="flex justify-between items-center" style="margin-bottom:20px">
-              <div>
-                <div style="font-weight:700;margin-bottom:4px">Status Kubernetes</div>
-                <div style="font-size:0.88rem;color:var(--text-secondary)">Estado atual do deployment no cluster</div>
-              </div>
-              <button class="btn btn-secondary btn-sm" onclick="loadK8sStatus()">Atualizar</button>
-            </div>
-            <div id="k8s-status-body" style="color:var(--text-muted);font-size:0.9rem">Clique em "Atualizar" para verificar.</div>
-            <div id="k8s-rollback-area" style="margin-top:16px;display:none">
-              <div class="divider"></div>
-              <div class="flex items-center justify-between flex-wrap gap-12">
-                <div>
-                  <div style="font-weight:700;color:var(--danger)">Rollback recomendado</div>
-                  <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px">O sistema detectou instabilidade no deployment atual.</div>
-                </div>
-                <button class="btn btn-danger" onclick="doRollback()">Reverter para versão anterior</button>
-              </div>
-            </div>
-          </div>
         </div>
 
         <!-- DEPLOY -->
@@ -335,8 +309,7 @@
           <div class="flex justify-between items-center" style="margin-bottom:16px">
             <div>
               <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:4px">Logs do Container</h2>
-              <p style="font-size:0.88rem;color:var(--text-secondary)">Últimas 200 linhas do pod em execução no Kubernetes.</p>
-            </div>
+              <p style="font-size:0.88rem;color:var(--text-secondary)">Logs recentes da aplicação e do processo de deploy.</p>            </div>
             <button class="btn btn-secondary btn-sm" onclick="loadLogs()">Atualizar Logs</button>
           </div>
 
@@ -347,8 +320,7 @@
                 <span class="td" style="background:#ffbd2e"></span>
                 <span class="td" style="background:#28c840"></span>
               </div>
-              <span style="font-size:0.78rem;color:var(--text-muted)">pod logs</span>
-              <button class="btn btn-ghost btn-sm" onclick="clearLogs()">Limpar</button>
+                <span style="font-size:0.78rem;color:var(--text-muted)">application logs</span>              <button class="btn btn-ghost btn-sm" onclick="clearLogs()">Limpar</button>
             </div>
             <div class="terminal-body" id="terminal">Clique em "Atualizar Logs" para buscar os logs do container...</div>
           </div>
@@ -378,8 +350,7 @@
 
           <div class="danger-zone">
             <div class="danger-title">Zona de Perigo</div>
-            <p class="danger-desc">Ao deletar o app, todos os deploys, variáveis de ambiente e recursos do Kubernetes associados serão removidos permanentemente.</p>
-            <button class="btn btn-danger" onclick="deleteApp()">Deletar este App</button>
+            <p class="danger-desc">Ao deletar o app, todos os deploys e variáveis de ambiente associados serão removidos permanentemente.</p>            <button class="btn btn-danger" onclick="deleteApp()">Deletar este App</button>
           </div>
         </div>
 
@@ -523,7 +494,6 @@
       }
 
       if (!hasDeploymentContent()) {
-        document.getElementById('k8s-status-body').textContent = 'Sem conteúdo de deploy ainda. Configure o repositório e dispare o primeiro deploy.';
         document.getElementById('terminal').textContent = '> Sem conteúdo de logs ainda. Faça o primeiro deploy para gerar logs.';
       }
 
@@ -542,61 +512,6 @@
       if (name === 'logs') loadLogs();
     }
 
-    async function loadK8sStatus() {
-      const body = document.getElementById('k8s-status-body');
-      const rollbackArea = document.getElementById('k8s-rollback-area');
-
-      if (!hasDeploymentContent()) {
-        body.textContent = 'Sem conteúdo de deploy ainda. Configure o repositório e dispare o primeiro deploy.';
-        rollbackArea.style.display = 'none';
-        return;
-      }
-
-      body.textContent = 'Consultando cluster Kubernetes...';
-      rollbackArea.style.display = 'none';
-
-      const { ok, data } = await Kubernetes.status(appId);
-
-      if (!ok || !data.success) {
-        body.textContent = 'Sem conteúdo de status disponível no momento.';
-        return;
-      }
-
-      const h = data.health;
-      body.innerHTML = `
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
-          <div><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">STATUS</div><strong>${escHtml(data.status)}</strong></div>
-          <div><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">RÉPLICAS</div><strong>${h.availableReplicas} / ${h.replicas}</strong></div>
-          <div><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">SAUDE</div><strong style="color:${h.healthy ? 'var(--success)' : 'var(--danger)'}">${h.healthy ? 'Saudavel' : 'Problema'}</strong></div>
-        </div>
-        <div style="margin-top:14px;font-size:0.85rem;color:var(--text-secondary)">${escHtml(h.message)}</div>
-      `;
-
-      document.getElementById('ov-replicas').textContent = `${h.availableReplicas} / ${h.replicas}`;
-
-      if (data.recoveryDecision?.shouldRollback) {
-        rollbackArea.style.display = 'block';
-      }
-    }
-
-    async function doRollback() {
-      const body = document.getElementById('k8s-status-body');
-
-      if (!hasAnyDeploy()) {
-        body.textContent = 'Ainda não há deploy para fazer rollback.';
-        return;
-      }
-
-      if (!confirm('Tem certeza? O deploy atual será revertido para a versão anterior.')) return;
-      const { ok, data } = await Kubernetes.rollback(appId);
-      if (ok) {
-        body.textContent = 'Rollback iniciado com sucesso. Atualizando status...';
-        document.getElementById('k8s-rollback-area').style.display = 'none';
-        loadK8sStatus();
-      } else {
-        body.textContent = data?.error || 'Não foi possível executar rollback no momento.';
-      }
-    }
 
     async function doDeploy() {
       const repoUrl = document.getElementById('repo-url').value.trim();
@@ -643,20 +558,15 @@
       stopInFlight = false;
       renderHeaderActions();
 
-      if (ok) {
-        const statusBody = document.getElementById('k8s-status-body');
-        if (statusBody) {
-          statusBody.textContent = 'Aplicação parada com sucesso.';
-        }
-
-        const terminal = document.getElementById('terminal');
-        if (terminal) {
-          terminal.textContent = '> Aplicação parada com sucesso.\n';
-        }
-
-        await refreshAppLiveData();
-        return;
+    if (ok) {
+      const terminal = document.getElementById('terminal');
+      if (terminal) {
+        terminal.textContent = '> Aplicação parada com sucesso.\n';
       }
+
+  await refreshAppLiveData();
+  return;
+}
 
       alert(data?.error || data?.details || 'Não foi possível parar a aplicação no momento.');
     }
@@ -742,14 +652,8 @@
         }
       }
 
-      terminal.textContent = '> Buscando logs do Kubernetes...\n';
-      const { ok, data } = await Kubernetes.logs(appId);
-      if (ok && data.logs) {
-        terminal.textContent = data.logs || '> Container sem logs disponíveis.';
-        terminal.scrollTop = terminal.scrollHeight;
-      } else {
-        terminal.textContent = '> Sem conteúdo de logs disponível no momento.';
-      }
+    terminal.textContent = '> Sem conteúdo de logs disponível no momento.';
+
     }
 
     function clearLogs() {

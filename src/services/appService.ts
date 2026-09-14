@@ -1,7 +1,6 @@
 import prisma from '../config/prisma';
 import { normalizeRepositoryUrl } from '../utils/githubWebhook';
 import { DeploymentProvider } from './deployment/deploymentProvider';
-import { KubernetesProvider } from './deployment/kubernetesProvider';
 import { DockerProvider } from './deployment/dockerProvider';
 
 export async function createApp(
@@ -73,18 +72,11 @@ export async function deleteApp(appId: string, userId: string) {
   // 3. Limpeza de infraestrutura (Runtime) via DeploymentProvider
   const lastDeploy = app.deploys[0];
 
-  const isKubernetes =
-    lastDeploy?.deployLogs.some((log) => log.message.includes("Kubernetes")) ||
-    (app.url ? !app.url.includes("localhost:") : false) ||
-    process.env.REQUIRE_KUBERNETES === "true";
-
-  const provider: DeploymentProvider = isKubernetes
-    ? new KubernetesProvider()
-    : new DockerProvider();
+  const provider: DeploymentProvider = new DockerProvider();
 
   try {
     await provider.remove(appId);
-    console.log(`[ZPLOY] Recursos de infraestrutura (${isKubernetes ? "Kubernetes" : "Docker"}) do app ${appId} removidos.`);
+    console.log(`[ZPLOY] Recursos Docker do app ${appId} removidos.`);
   } catch (error) {
     console.warn(`[ZPLOY] Erro ao remover recursos do app ${appId}. Seguindo...`, error);
   }

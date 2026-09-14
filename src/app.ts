@@ -5,7 +5,6 @@ import userRoutes from "./routes/userRoutes";
 import authRoutes from "./routes/authRoutes"; 
 import appRoutes from "./routes/appRoutes";
 import deployRoutes from "./routes/deployRoutes";
-import kubernetesRoutes from "./routes/kubernetesRoutes";
 import prisma from "./config/prisma";
 import { addDeployJob } from "./queues/deployQueue";
 import { getWebhookRepositoryUrl, repositoryMatches, shouldHandleGithubEvent, verifyGithubSignature } from "./utils/githubWebhook";
@@ -168,6 +167,5 @@ app.post("/webhooks/github", async (req, res) => {
 });
 
 app.use("/deploys", apiGeneralLimiter, deployRoutes);
-app.use("/kubernetes", apiGeneralLimiter, kubernetesRoutes);
 
 export default app;

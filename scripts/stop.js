@@ -4,7 +4,6 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const args = process.argv.slice(2);
 
-const stopK8s = args.includes('--k8s');
 const stopDemo = args.includes('--demo');
 const killNode = args.includes('--kill-node');
 
@@ -32,10 +31,6 @@ function main() {
   }
 
   runStep('docker', ['compose', 'down'], 'docker-down');
-
-  if (stopK8s) {
-    runStep('minikube', ['stop'], 'minikube-stop');
-  }
 
   // Opcional: finalizar processos Node órfãos no Windows.
   // Mantido por flag para não matar o próprio `node scripts/stop.js`.

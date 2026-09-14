@@ -11,7 +11,6 @@ import { inferContainerPort, resolveDockerfileContent } from "../utils/dockerfil
 
 // --- NOVOS IMPORTS DA ARQUITETURA ---
 import { DockerProvider } from "../services/deployment/dockerProvider";
-import { KubernetesProvider } from "../services/deployment/kubernetesProvider";
 import { DeploymentConfig } from "../services/deployment/deploymentProvider";
 import {
   createLockToken,
@@ -318,7 +317,6 @@ export const worker = new Worker(
       // FASE DE DEPLOY (A MÁGICA DA ARQUITETURA ACONTECE AQUI)
       // ---------------------------------------------------------
       const envVars = await prisma.envVar.findMany({ where: { appId } });
-      const requireKubernetes = process.env.REQUIRE_KUBERNETES === "true";
 
       const deployConfig: DeploymentConfig = {
         appId,
@@ -328,41 +326,17 @@ export const worker = new Worker(
         deployId,
         // Descriptografa somente aqui, no momento em que o container/Deployment precisa dos valores reais.
         envVars: envVars.map(e => ({ key: e.key, value: decryptEnvValue(e.value) })),
-        minReplicas: app?.minReplicas ?? Number(process.env.KUBERNETES_MIN_REPLICAS ?? 1),
-        maxReplicas: app?.maxReplicas ?? Number(process.env.KUBERNETES_MAX_REPLICAS ?? 3),
-        targetCPUUtilizationPercentage: app?.targetCPUUtilizationPercentage ?? Number(process.env.KUBERNETES_CPU_TARGET ?? 70),
       };
 
-      let deployResult;
+      const dockerProvider = new DockerProvider();
+      const deployResult = await dockerProvider.deploy(deployConfig);
 
-      try {
-        const k8sProvider = new KubernetesProvider();
-        deployResult = await k8sProvider.deploy(deployConfig);
-        
-        await createDeployLog({
-          deployId,
-          type: "runtime",
-          level: "info",
-          message: `Aplicação publicada no Kubernetes: ${deployResult.url}`,
-        });
-      } catch (k8sError) {
-        if (requireKubernetes) {
-          const reason = k8sError instanceof Error ? k8sError.message : String(k8sError);
-          throw new Error(`Kubernetes obrigatório, mas indisponível: ${reason}`);
-        }
-
-        console.warn("[Worker] Kubernetes falhou/indisponível. Iniciando fallback via DockerProvider.", k8sError);
-        
-        const dockerProvider = new DockerProvider();
-        deployResult = await dockerProvider.deploy(deployConfig);
-
-        await createDeployLog({
-          deployId,
-          type: "runtime",
-          level: "info",
-          message: `Aplicação online em Docker: ${deployResult.url}`,
-        });
-      }
+      await createDeployLog({
+        deployId,
+        type: "runtime",
+        level: "info",
+        message: `Aplicação online em Docker: ${deployResult.url}`,
+      });
 
       // ---------------------------------------------------------
       // ATUALIZAÇÃO DE STATUS E LIMPEZA
@@ -408,7 +382,7 @@ export const worker = new Worker(
 
       return {
         status: "sucesso",
-        porta: deployResult.porta || 80, // O K8s pode não retornar porta, então usamos um padrão
+        porta: deployResult.porta || 80,
         runtime: deployResult.runtime,
         url: deployResult.url,
       };

@@ -189,11 +189,6 @@ const Apps = {
   stop: (id) => api('POST', `/apps/${id}/stop`),
 };
 
-const Kubernetes = {
-  status: (appId) => api('GET', `/kubernetes/${appId}/status`),
-  logs: (appId, tail = 200) => api('GET', `/kubernetes/${appId}/logs?tail=${tail}`),
-  rollback: (appId) => api('POST', `/kubernetes/${appId}/rollback`),
-};
 
 const Deploys = {
   logs: (deployId) => api('GET', `/deploys/${deployId}/logs`),
