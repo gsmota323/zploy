@@ -60,7 +60,17 @@ app.use(
 );
 
 
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrcAttr: ["'unsafe-inline'"],
+      },
+    },
+  })
+);
 
 // Serve o frontend estático
 app.use("/frontend", express.static(path.join(process.cwd(), "frontend")));
